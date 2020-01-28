@@ -46,7 +46,7 @@ cfg.meg         = 'meg.json';
 
 rawData         = ft_opm_create(cfg);
 
-% Extract the trigger channel for later.
+% Extract the trigger channel for later. This doesn't work yet. 
 cfg                     = [];
 cfg.chantype            = {'TRIG'};
 triggerData             = ft_selectdata(cfg,rawData);
