@@ -26,9 +26,6 @@ clear *Dir pcName
 % > Need to add optitrack data as coilpos/coilori?
 
 % Or common average ref
-ncfg.grad.references        = repmat(ncfg.slotinfo.channel',[length(ncfg.slotinfo.channel(:,1)) 1]);
-ncfg.grad.main              = ncfg.slotinfo.channel;
-
 ncfg.sample                 = 1000;
 ncfg.filters.bpfilter       = 'yes';
 ncfg.filters.bpfreq         = [0.5 70];

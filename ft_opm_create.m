@@ -140,20 +140,7 @@ catch
     end      
 end
 
-% Forward model Check
-subjectSource  = (positions|isfield(cfg,'space')) & isfield(cfg,'sMRI');
-subjectSensor = ~subjectSource;
 
-if subjectSource
-    forward     = 1;
-    template    = 0;
-elseif subjectSensor
-    forward 	= 0;
-    template    = 0;
-else
-    forward     = 1;
-    template    = 1;
-end
 
 %% Make the main fieldtrip structure
 rawData         = [];
@@ -176,5 +163,25 @@ rawData.grad.chanpos    = posOri.chanpos;
 rawData.grad.chanori    = posOri.chanori;
 rawData.grad.chanunit   = channels.unit;
 rawData.grad.label      = channels.label;
+
+% Forward model Check
+subjectSource  = (positions|isfield(cfg,'space')) & isfield(cfg,'sMRI');
+subjectSensor = ~subjectSource;
+
+if subjectSource
+    forward     = 1;
+    template    = 0;
+elseif subjectSensor
+    forward 	= 0;
+    template    = 0;
+else
+    forward     = 1;
+    template    = 1;
+end
+
+
+
+
+
 
 
