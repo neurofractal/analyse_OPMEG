@@ -26,3 +26,8 @@ posAll                  = table2struct(readtable(filename, opts),'ToScalar',true
 pos.label               = posAll.label;
 pos.chanpos             = [posAll.Px posAll.Py posAll.Pz];
 pos.chanori             = [posAll.Ox posAll.Oy posAll.Oz];
+
+pos.label = cellstr(pos.label);
+end
+
+

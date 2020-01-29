@@ -1,47 +1,51 @@
-% (1.2) This shouldn't need muching changing is Box Sync is working. 
-pcName          = getenv('COMPUTERNAME');
-if strcmp(pcName,'PRINCE')
-    matlabDir       = 'D:\MATLAB';
-else
-    error('Error: Unknown PC')
-end
+% %% NIC
+% % (1.2) This shouldn't need muching changing is Box Sync is working. 
+% pcName          = getenv('COMPUTERNAME');
+% if strcmp(pcName,'PRINCE')
+%     matlabDir       = 'D:\MATLAB';
+% else
+%     error('Error: Unknown PC')
+% end
+% 
+% fieldtripDir    = strcat(matlabDir,'\Toolboxes\fieldtrip-20200121');
+% workingDir      = strcat(matlabDir,'\Analysis');
+% functionsDir    = strcat(workingDir,'\Functions');
+% templatesDir    = strcat(workingDir,'\Templates');
+% outputsDir      = strcat(workingDir,'\Outputs');
+% % dataDir         = strcat(workingDir,strcat('\Data\',ncfg.fileinfo.folder));
 
-fieldtripDir    = strcat(matlabDir,'\Toolboxes\fieldtrip-20200121');
-workingDir      = strcat(matlabDir,'\Analysis');
-functionsDir    = strcat(workingDir,'\Functions');
-templatesDir    = strcat(workingDir,'\Templates');
-outputsDir      = strcat(workingDir,'\Outputs');
-% dataDir         = strcat(workingDir,strcat('\Data\',ncfg.fileinfo.folder));
+%% Paths (RS)
+fieldtripDir    = 'D:\scripts\fieldtrip-master';
+script_dir      = 'D:\Github\analyse_OPMEG';
+data_dir        = 'D:\Github\OPM\testData';
+save_dir        = 'D:\Github\OPM\testData';
 
+% Add Fieldtrip to path
+disp('Adding Fieldtrip and analyse_OPMEG to your MATLAB path');
 addpath(fieldtripDir)
 ft_defaults;
-cd(workingDir)
-addpath(functionsDir,strcat(functionsDir,'\GUI'),templatesDir,workingDir)
 
-clear *Dir pcName
+% Add analyse_OPMEG Scripts to path
+addpath(genpath(script_dir));
 
+% cd to save dir
+cd(save_dir)
 
-
-% Notes.
-% > Need to add optitrack data as coilpos/coilori?
-
-% Or common average ref
-ncfg.sample                 = 1000;
-ncfg.filters.bpfilter       = 'yes';
-ncfg.filters.bpfreq         = [0.5 70];
-ncfg.filters.dftfilter      = 'yes';
-ncfg.filters.demean         = 'no';
+% % Or common average ref
+% ncfg.sample                 = 1000;
+% ncfg.filters.bpfilter       = 'yes';
+% ncfg.filters.bpfreq         = [0.5 70];
+% ncfg.filters.dftfilter      = 'yes';
+% ncfg.filters.demean         = 'no';
 
 %% (2) Start preprocessing.
 % (2.1) Read in the raw data.
 cfg             = [];
 cfg.data        = 'meg.bin';
-cfg.coordystem  = 'coordsystem.json';
-cfg.positions   = 'positions.tsv';
-cfg.channels    = 'channels.tsv';
-cfg.meg         = 'meg.json';
-
 rawData         = ft_opm_create(cfg);
+
+% Plot using ft_databrowser
+ft_databrowser([],rawData);
 
 % Extract the trigger channel for later. This doesn't work yet. 
 cfg                     = [];
