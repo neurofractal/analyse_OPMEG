@@ -68,7 +68,7 @@ if ~isfield(cfg, 'fname')
     cfg.fname = 'sim_opm';
 end
 if ~isfield(cfg, 'precision')
-    cfg.precision = 'single';
+    cfg.precision = 'double';
 end
 
 %% Read Binary File
@@ -97,7 +97,11 @@ coordFile   = fullfile(direc,[base{1},'coordsystem.json']);
 
 %% Load in channels and reorganise the raw data
 % Load a channels file.
-channels    = ft_read_chan_tsv(chanFile);
+try
+    channels    = ft_read_chan_tsv(chanFile);
+catch
+    error(['Cannot read the file: ' chanFile]);
+end
 
 % Reformat data according to channel info.
 numChan     = size(channels.name,1);
@@ -114,8 +118,18 @@ clear data_raw
 
 %% Get header information from json files
 % Check for MEG Info
-meg             = ft_read_json(megFile);
-coordsystem     = ft_read_json(coordFile);
+try
+    meg             = ft_read_json(megFile);
+catch
+     error(['ERROR. Attempted to read: ' megFile]);
+end
+
+try
+    coordsystem     = ft_read_json(coordFile);
+catch
+    ft_warning('Not loaded any coordinate system');
+    coordsystem = [];
+end
 
 % Position File check 
 try % to load a channels file
@@ -155,6 +169,7 @@ rawData.hdr.Fs              = meg.SamplingFrequency;
 rawData.hdr.nSamples        = length(data(1,:));
 rawData.hdr.nTrials         = 1;
 rawData.hdr.nSamplesPre     = 0;
+rawData.hdr.fieldori        = channels.fieldori;
 
 if positions
     rawData.grad.chanpos    = posOri.chanpos;
