@@ -80,7 +80,7 @@ rawData_rad_ref = ft_selectdata(cfg, rawData);
 
 % Extract the trigger channel for later. This doesn't work yet. 
 cfg                     = [];
-cfg.chantype            = {'TRIGG'}; % Wrong.
+cfg.hdr.chantype            = {'trigger'}; % Wrong.
 triggerData             = ft_selectdata(cfg,rawData);
 % And grab the reference channels.
 cfg                     = [];

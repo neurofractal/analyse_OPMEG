@@ -2,8 +2,8 @@ function [rawData] = ft_opm_create(cfg)
 % Function to read optically-pumped magnetencephalography (OPMEG) data
 % acquired from the UCL Wellcome Centre for Neuroimaging.
 %
-% FORMAT data = ft_opm_create(cfg)
-%   cfg               - input structure
+% EXAMPLE USEAGE:   data = ft_opm_create(cfg)
+% ...where, cfg is the input structure
 % 
 %%%%%%%%%%%
 % Option 1
@@ -75,7 +75,7 @@ if ~isfield(cfg, 'precision')
     cfg.precision = 'double';
 end
 
-%% Determine
+%% Determine whether to use cfg.data or cfg.folder
 if ~isfield(cfg, 'data')
     use_bids = 1;
 else
@@ -90,7 +90,7 @@ if isfield(cfg, 'data') && isfield(cfg, 'folder')
         ' Defaulting to cfg.data']);
 end
 
-%% If using option 2 BIDS
+%% If using option 2 = BIDS!
 if use_bids
     try
         file_name_bids = ['sub-' cfg.bids.sub '_ses-' cfg.bids.ses ...
