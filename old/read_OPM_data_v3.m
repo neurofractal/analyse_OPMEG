@@ -17,8 +17,8 @@
 %% Paths (RS)
 fieldtripDir    = 'D:\scripts\fieldtrip-master';
 script_dir      = 'D:\Github\analyse_OPMEG';
-data_dir        = 'D:\Github\OPM\testData';
-save_dir        = 'D:\Github\OPM\testData';
+data_dir        = 'D:\data\AEF2\sub-001\ses-001\meg';
+save_dir        = 'D:\data\AEF2\sub-001\ses-001\meg';
 
 % Add Fieldtrip to path
 disp('Adding Fieldtrip and analyse_OPMEG to your MATLAB path');
@@ -41,11 +41,38 @@ cd(save_dir)
 %% (2) Start preprocessing.
 % (2.1) Read in the raw data.
 cfg             = [];
-cfg.data        = 'meg.bin';
+cfg.data        = 'sub-001_ses-001_task-beep_run-001_meg.bin';
 rawData         = ft_opm_create(cfg);
+
+% (2.2) Read in the raw data using BIDS
+cfg             = [];
+cfg.folder      = data_dir;
+cfg.bids.task   = 'beep';
+cfg.bids.sub    = '001';
+cfg.bids.ses    = '001';
+cfg.bids.run    = '001';
+rawData         = ft_opm_create(cfg);
+
 
 % Plot using ft_databrowser
 ft_databrowser([],rawData);
+
+%% Select the sensors of interest
+% Select only sensors measuring radial fields
+disp('Selecting ensors measuring radial fields only');
+cfg             = [];
+cfg.channel     = vertcat('-G2-N1-RAD','-G2-MT-RAD','-G2-OJ-RAD',...
+    rawData.label(contains(rawData.hdr.fieldori,'RAD')));
+rawData_rad     = ft_selectdata(cfg, rawData);
+
+% Plot using ft_databrowser
+ft_databrowser([],rawData_rad);
+
+cfg = [];
+cfg.channel     = 'megref';
+rawData_rad_ref = ft_selectdata(cfg, rawData);
+
+
 
 % Extract the trigger channel for later. This doesn't work yet. 
 cfg                     = [];
