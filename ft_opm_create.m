@@ -4,15 +4,22 @@ function [rawData] = ft_opm_create(cfg)
 %
 % FORMAT data = ft_opm_create(cfg)
 %   cfg               - input structure
-% Optional fields of cfg:
-% File information
-%   cfg.folder          = 'string', BIDS folder.
-% Provide either the filename or BIDS format: task, sub, ses and run.
-%   cfg.filename        = 'MEG.bin'
-%   cfg.filename.task   = 'AEF'
-%   cfg.filename.sub    = '001'
-%   cfg.filename.ses    = '003'
-%   cfg.filename.run    = '002'
+% 
+%%%%%%%%%%%
+% Option 1
+%%%%%%%%%%%
+%   cfg.data          = path to raw .bin file
+%                       (requires .json and _channels.tsv in same folder
+%                       with same name as the .bin file)
+%%%%%%%%%%%
+% Option 2
+%%%%%%%%%%%
+%   cfg.folder          = path to folder containing data 
+%                       organised in BIDS format
+%   cfg.bids.task       = 'AEF'
+%   cfg.bids.sub        = '001'
+%   cfg.bids.ses        = '003'
+%   cfg.bids.run        = '002'
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 % Adapted from spm_opm_create (Tim Tierney)
@@ -58,9 +65,6 @@ end
 if ~isfield(cfg, 'offset')
     cfg.offset  = 6.5;
 end
-if ~isfield(cfg, 'data')
-    cfg.data = zeros(1,cfg.nSamples);
-end
 if ~isfield(cfg, 'wholehead')
     cfg.wholehead = 1;
 end
@@ -71,16 +75,42 @@ if ~isfield(cfg, 'precision')
     cfg.precision = 'double';
 end
 
+%% Determine
+if ~isfield(cfg, 'data')
+    use_bids = 1;
+else
+    path_to_bin_file = cfg.data;
+    use_bids = 0;
+end
+
+% If the user has specified both cfg.data and cfg.folder default to
+% cfg.data, but warn the user
+if isfield(cfg, 'data') && isfield(cfg, 'folder')
+    ft_warning(['Both cfg.data and cfg.folder have been supplied.'...
+        ' Defaulting to cfg.data']);
+end
+
+%% If using option 2 BIDS
+if use_bids
+    try
+        file_name_bids = ['sub-' cfg.bids.sub '_ses-' cfg.bids.ses ...
+            '_task-' cfg.bids.task '_run-' cfg.bids.run '_meg.bin']; 
+    catch
+    error('Did you specify all the required cfg.bids information?')
+    end
+    path_to_bin_file = fullfile(cfg.folder,file_name_bids);
+end
+
 %% Read Binary File
 try % to read data 
-    [direc, dataFile] = fileparts(cfg.data);
-    dat         = fopen(cfg.data);
+    [direc, dataFile] = fileparts(path_to_bin_file);
+    dat         = fopen(path_to_bin_file);
     data_raw    = fread(dat,Inf,cfg.precision,0,'b');
     fclose(dat);
     binData     = 1;
 catch % if not readable check if it is numeric 
-    if ~isa(cfg.data,'numeric') % if not numeric throw error
-        error('A valid dataest or file was not supplied')
+    if ~isa(path_to_bin_file,'numeric') % if not numeric throw error
+        error(['Cannot read the file: ' path_to_bin_file])
     end
     binData     = 0;
     direc       = pwd();
