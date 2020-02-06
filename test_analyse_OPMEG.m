@@ -45,6 +45,7 @@ cd(save_dir)
 %% (2) Start preprocessing.
 % Read in the raw data.
 cfg             = [];
+cfg.precision   = 'single';
 cfg.data        = 'sub-001_ses-001_task-beep_run-001_meg.bin';
 rawData         = ft_opm_create(cfg);
 
@@ -69,18 +70,98 @@ cfg.channel     = vertcat('-G2-N1-RAD','-G2-MT-RAD','-G2-OJ-RAD',...
     rawData.label(contains(rawData.hdr.fieldori,'RAD')));
 rawData_rad     = ft_selectdata(cfg, rawData);
 
+% Denoise
+cfg                     = [];
+cfg.refchannel          = {'G2-N0-RAD','G2-N4-RAD','G2-N3-RAD','G2-MV-RAD'};
+%cfg.channel             = [ncfg.chaninfo.channel];
+cfg.truncate            = 'no';
+cfg.zscore              = 'no';
+cfg.updatesens          = 'yes';
+denoiseData             = ft_denoise_pca(cfg,rawData_rad);
+
+cfg = [];
+cfg.resamplefs = 1000;
+[rawData_rad] = ft_resampledata(cfg, rawData_rad);
+
+% Band-pass filter between 0.5-250Hz to help visualisation
+cfg = [];
+cfg.demean      = 'yes';
+cfg.continuous  = 'yes';
+cfg.bpfilter    = 'yes';
+cfg.bpfreq      = [1 30];
+rawData_rad         = ft_preprocessing(cfg,rawData_rad);
+
 % Plot using ft_databrowser
 ft_databrowser([],rawData_rad);
 
 cfg = [];
-cfg.channel     = 'megref';
-rawData_rad_ref = ft_selectdata(cfg, rawData);
+cfg.channel         = vertcat(rawData_rad.label,{'-G2-N0-RAD',...
+    '-G2-N4-RAD','-G2-N3-RAD','-G2-MV-RAD','-G2-OF-RAD'}');
+rawData_rad_no_ref = ft_selectdata(cfg, rawData_rad);
+
+ft_databrowser([],rawData_rad_no_ref);
+
+%%
+cfg = [];
+cfg.dataset                 = 'sub-001_ses-001_task-beep_run-001_meg.bin';
+cfg.trialdef.trigchan       = 'trigger';
+cfg.trialdef.downsample     = 1000;
+%cfg.continuous              = 'yes';
+cfg.trialdef.prestim        = 0.1;        % pre-stimulus interval
+cfg.trialdef.poststim       = 0.4;        % post-stimulus interval
+cfg.trialfun                = 'OPM_TrialFun_RS';
+banana                    = ft_definetrial(cfg);
+
+%%
+% Redefines the filtered data
+cfg                         = [];
+data                        = ft_redefinetrial(banana,rawData_rad_no_ref);
+
+ft_databrowser([],data);
+avg = ft_timelockanalysis([],data);
+
+% figure;
+% for i = 1:12
+%     
+%     cfg = [];
+%     cfg.baseline = [-0.1 0];
+%     cfg.xlim = [-0.1 0.4];
+%     cfg.baselinetype  = 'relative';
+%     %cfg.ylim = [-1e-13 3e-13];
+%     cfg.channel = avg.label{i};
+%     title(avg.label{i});
+%     subplot(3,4,i);ft_singleplotER(cfg,avg);
+% end
+% 
+% 
+% cfg = [];
+%     cfg.baseline = [-0.1 0];
+%     cfg.xlim = [-0.1 0.4];
+%     cfg.baselinetype  = 'relative';
+%     %cfg.ylim = [-1e-13 3e-13];
+%     %cfg.channel = avg.label{i};
+%     title('ALL');
+% figure;ft_singleplotER(cfg,avg);
+
+cfg = [];
+cfg.parameter = 'avg';
+ft_databrowser(cfg,avg);
+
+
+
+
+
+
+
+
+
+
 
 
 
 % Extract the trigger channel for later. This doesn't work yet. 
 cfg                     = [];
-cfg.hdr.chantype            = {'trigger'}; % Wrong.
+cfg.hdr.chantype        = 'trigger'; % Wrong.
 triggerData             = ft_selectdata(cfg,rawData);
 % And grab the reference channels.
 cfg                     = [];
