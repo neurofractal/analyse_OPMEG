@@ -1,39 +1,32 @@
 function [rawData] = ft_opm_create(cfg)
-% Read or simulate magnetometer data and optionally set up forward model
-% FORMAT D = spm_opm_create(S)
-%   cfg               - input structure
-% Optional fields of cfg:
-% SENSOR LEVEL INFO
-%   cfg.data          - filepath to .bin file        - Default: Simulates data 
-%   cfg.channels      - channels.tsv file            - Default: REQUIRED  
-%   cfg.fs            - Sampling frequency (Hz)      - Default: REQUIRED if cfg.meg is empty
-%   cfg.meg           - meg.json file                - Default: REQUIRED if cfg.fs is empty
-%   cfg.precision     - 'single' or 'double'         - Default: 'single'
-% SIMULATION
-%   cfg.wholehead     - whole head coverage flag     - Deafult: 0
-%   cfg.space         - space between sensors(mm)    - Default: 25
-%   cfg.offset        - scalp to sensor distance(mm) - Default: 6.5
-%   cfg.nSamples      - number of samples            - Default: 1000
-%   cfg.Dens          - number of density checks     - Default: 40
-
-% SOURCE LEVEL INFO
-%   cfg.coordsystem   - coordsystem.json file        - Default: 
-%   cfg.positions     - positions.tsv file           - Default:
-%   cfg.sMRI          - Filepath to  MRI file        - Default: uses template
-%   cfg.cortex        - Custom cortical mesh         - Default: Use inverse normalised cortical mesh
-%   cfg.scalp         - Custom scalp mesh            - Default: Use inverse normalised scalp mesh
-%   cfg.oskull        - Custom outer skull mesh      - Default: Use inverse normalised outer skull mesh
-%   cfg.iskull        - Custom inner skull mesh      - Default: Use inverse normalised inner skull mesh
-%   cfg.voltype       - Volume conducter Model type  - Default: 'Single Shell'
-%   cfg.meshres       - mesh resolution(1,2,3)       - Default: 1
-%   cfg.lead          - flag to compute lead field   - Default: 0
-% Output:
-%  D           - MEEG object (also written to disk)
-%  L           - Lead field (also written on disk)
+% Function to read optically-pumped magnetencephalography (OPMEG) data
+% acquired from the UCL Wellcome Centre for Neuroimaging.
+%
+% EXAMPLE USEAGE:   data = ft_opm_create(cfg)
+% ...where, cfg is the input structure
+% 
+%%%%%%%%%%%
+% Option 1
+%%%%%%%%%%%
+%   cfg.data          = path to raw .bin file
+%                       (requires .json and _channels.tsv in same folder
+%                       with same name as the .bin file)
+%%%%%%%%%%%
+% Option 2
+%%%%%%%%%%%
+%   cfg.folder          = path to folder containing data 
+%                       organised in BIDS format
+%   cfg.bids.task       = 'AEF'
+%   cfg.bids.sub        = '001'
+%   cfg.bids.ses        = '003'
+%   cfg.bids.run        = '002'
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
+% Adapted from spm_opm_create (Tim Tierney)
 
-% Adapted from spm_opm_create (Tim Tierney) by Nicholas Alexander
+% Authors:  Nicholas Alexander  (n.alexander@ucl.ac.uk)
+%           Robert Seymour      (rob.seymour@ucl.ac.uk) 
+%__________________________________________________________________________
 
 %% Set default values
 if ~isfield(cfg, 'voltype')
@@ -72,9 +65,6 @@ end
 if ~isfield(cfg, 'offset')
     cfg.offset  = 6.5;
 end
-if ~isfield(cfg, 'data')
-    cfg.data = zeros(1,cfg.nSamples);
-end
 if ~isfield(cfg, 'wholehead')
     cfg.wholehead = 1;
 end
@@ -82,54 +72,98 @@ if ~isfield(cfg, 'fname')
     cfg.fname = 'sim_opm';
 end
 if ~isfield(cfg, 'precision')
-    cfg.precision = 'single';
+    cfg.precision = 'double';
 end
 
+%% Determine whether to use cfg.data or cfg.folder
+if ~isfield(cfg, 'data')
+    use_bids = 1;
+else
+    path_to_bin_file = cfg.data;
+    use_bids = 0;
+end
+
+% If the user has specified both cfg.data and cfg.folder default to
+% cfg.data, but warn the user
+if isfield(cfg, 'data') && isfield(cfg, 'folder')
+    ft_warning(['Both cfg.data and cfg.folder have been supplied.'...
+        ' Defaulting to cfg.data']);
+end
+
+%% If using option 2 = BIDS!
+if use_bids
+    try
+        file_name_bids = ['sub-' cfg.bids.sub '_ses-' cfg.bids.ses ...
+            '_task-' cfg.bids.task '_run-' cfg.bids.run '_meg.bin']; 
+    catch
+    error('Did you specify all the required cfg.bids information?')
+    end
+    path_to_bin_file = fullfile(cfg.folder,file_name_bids);
+end
 
 %% Read Binary File
 try % to read data 
-    [direc, dataFile] = fileparts(cfg.data);
-    dat         = fopen(cfg.data);
-    cfg.data    = fread(dat,Inf,cfg.precision,0,'b');
+    [direc, dataFile] = fileparts(path_to_bin_file);
+    dat         = fopen(path_to_bin_file);
+    data_raw    = fread(dat,Inf,cfg.precision,0,'b');
     fclose(dat);
     binData     = 1;
 catch % if not readable check if it is numeric 
-    if ~isa(cfg.data,'numeric') % if not numeric throw error
-        error('A valid dataest or file was not supplied')
+    if ~isa(path_to_bin_file,'numeric') % if not numeric throw error
+        error(['Cannot read the file: ' path_to_bin_file])
     end
     binData     = 0;
     direc       = pwd();
     dataFile    = cfg.fname;
 end
 
-%% identify potential BIDS Files
+%% 
+% Identify potential BIDS Files
 base        = strsplit(dataFile,'meg');
 chanFile    = fullfile(direc,[base{1},'channels.tsv']);
 megFile     = fullfile(direc,[base{1},'meg.json']);
 posFile     = fullfile(direc,[base{1},'positions.tsv']);
 coordFile   = fullfile(direc,[base{1},'coordsystem.json']);
 
+%% Load in channels and reorganise the raw data
 % Load a channels file.
-channels    = ft_read_chan_tsv(chanFile);
-
-% Reformat data according to channel info.
-numChan     = size(channels.label,1);
-
-if binData
-    data    = reshape(cfg.data,numChan,numel(cfg.data)/numChan);
-elseif numChan ~= size(cfg.data,1)
-    error('number of channels in cfg.data different to cfg.channels')
-else
-    data    = cfg.data;
+try
+    channels    = ft_read_chan_tsv(chanFile);
+catch
+    error(['Cannot read the file: ' chanFile]);
 end
 
+% Reformat data according to channel info.
+numChan     = size(channels.name,1);
+
+if binData
+    data    = reshape(data_raw,numChan,numel(data_raw)/numChan);
+elseif numChan ~= size(data_raw,1)
+    error('number of channels in cfg.data different to cfg.channels')
+else
+    data    = data_raw;
+end
+
+clear data_raw
+
+%% Get header information from json files
 % Check for MEG Info
-meg             = ft_read_json(cfg.meg);
-coordsystem     = ft_read_json(coordFile);
+try
+    meg             = ft_read_json(megFile);
+catch
+     error(['ERROR. Attempted to read: ' megFile]);
+end
+
+try
+    coordsystem     = ft_read_json(coordFile);
+catch
+    ft_warning('Not loaded any coordinate system');
+    coordsystem = [];
+end
 
 % Position File check 
 try % to load a channels file
-    posOri          = ft_read_pos_tsv(cfg.positions);
+    posOri          = ft_read_pos_tsv(posFile);
     positions       = 1;
 catch 
     try % to load a BIDS channel file 
@@ -140,41 +174,59 @@ catch
     end      
 end
 
-% Forward model Check
-subjectSource  = (positions|isfield(cfg,'space')) & isfield(cfg,'sMRI');
-subjectSensor = ~subjectSource;
+%% Make the main fieldtrip structure
+% Main structure
+rawData                     = [];
+rawData.label               = channels.name;
+rawData.fsample             = meg.SamplingFrequency;
+rawData.time{1}             = (0:1:(size(data,2)-1))./rawData.fsample;
+rawData.trial{1}            = data;
+rawData.sampleinfo          = [1 length(data(1,:))];
 
-if subjectSource
-    forward     = 1;
-    template    = 0;
-elseif subjectSensor
-    forward 	= 0;
-    template    = 0;
-else
-    forward     = 1;
-    template    = 1;
+% Construct a cfg file
+%%%%%%%%%
+% TO DO
+%%%%%%%%%%
+%rawData.cfg                 = cfg;
+
+% Now do the same for the header information
+rawData.hdr                 = [];
+rawData.hdr.label           = channels.name;
+rawData.hdr.chantype        = channels.type;
+rawData.hdr.chanunit        = channels.units;
+rawData.hdr.dimord          = 'chan_time';
+rawData.hdr.Fs              = meg.SamplingFrequency;
+rawData.hdr.nSamples        = length(data(1,:));
+rawData.hdr.nTrials         = 1;
+rawData.hdr.nSamplesPre     = 0;
+rawData.hdr.fieldori        = channels.fieldori;
+
+if positions
+    rawData.grad.chanpos    = posOri.chanpos;
+    rawData.grad.chanori    = posOri.chanori;
+    indx = find(contains(channels.type,'megmag'));
+    rawData.grad.chanunit   = channels.units((indx));
+    rawData.grad.label      = channels.name;
 end
 
-%% Make the main fieldtrip structure
-rawData         = [];
-rawData.label       = cellstr(channels.label);
-rawData.chantype    = cellstr(channels.chantype);
-rawData.chanunit    = cellstr(channels.unit);
-rawData.trial{1}    = data;
-rawData.time{1}     = 0:(1/meg.SamplingFrequency):(length(data(1,:))/meg.SamplingFrequency);
-rawData.dimord      = 'chan_time';
-rawData.cfg         = cfg;
-rawData.sampleinfo  = [1 length(data(1,:))];
-rawData.hdr.Fs          = meg.SamplingFrequency;
-rawData.hdr.nChans      = length(channels.label);
-rawData.hdr.nSamples    = length(data(1,:));
-rawData.hdr.nTrials     = 1;
-rawData.hdr.label       = channels.label;
-rawData.hdr.chantype    = channels.chantype;
-rawData.hdr.chanunit    = channels.unit;
-rawData.grad.chanpos    = posOri.chanpos;
-rawData.grad.chanori    = posOri.chanori;
-rawData.grad.chanunit   = channels.unit;
-rawData.grad.label      = channels.label;
+% % Forward model Check
+% subjectSource  = (positions|isfield(cfg,'space')) & isfield(cfg,'sMRI');
+% subjectSensor = ~subjectSource;
+% 
+% if subjectSource
+%     forward     = 1;
+%     template    = 0;
+% elseif subjectSensor
+%     forward 	= 0;
+%     template    = 0;
+% else
+%     forward     = 1;
+%     template    = 1;
+end
+
+
+
+
+
 
 
