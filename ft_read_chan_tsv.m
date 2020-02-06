@@ -23,12 +23,16 @@ end
 
 %% Try to determine the orientation of the sensors
 for i = 1:length(channels.name)
-    chan_end = channels.name{i}(end-2:end);
-    if strcmp(chan_end,'TAN')
-        channels.fieldori{i,1} = chan_end;
-    elseif strcmp(chan_end,'RAD')
-        channels.fieldori{i,1} = chan_end;
-    else
+    try
+        chan_end = channels.name{i}(end-2:end);
+        if strcmp(chan_end,'TAN')
+            channels.fieldori{i,1} = chan_end;
+        elseif strcmp(chan_end,'RAD')
+            channels.fieldori{i,1} = chan_end;
+        else
+            channels.fieldori{i,1} = 'UNKNOWN';
+        end
+    catch
         channels.fieldori{i,1} = 'UNKNOWN';
     end
 end

@@ -70,6 +70,12 @@ cfg.channel     = vertcat('-G2-N1-RAD','-G2-MT-RAD','-G2-OJ-RAD',...
     rawData.label(contains(rawData.hdr.fieldori,'RAD')));
 rawData_rad     = ft_selectdata(cfg, rawData);
 
+% Plot PSD
+cfg = [];
+cfg.foi = [0:0.01:250];
+%cfg.remove_trig = 'yes';
+ft_FFT_OPM(cfg,rawData_rad);
+
 % Denoise
 cfg                     = [];
 cfg.refchannel          = {'G2-N0-RAD','G2-N4-RAD','G2-N3-RAD','G2-MV-RAD'};
@@ -100,6 +106,15 @@ cfg.channel         = vertcat(rawData_rad.label,{'-G2-N0-RAD',...
 rawData_rad_no_ref = ft_selectdata(cfg, rawData_rad);
 
 ft_databrowser([],rawData_rad_no_ref);
+
+cfg = [];
+cfg.foi = [0.5:0.01:40];
+%cfg.remove_trig = 'yes';
+ft_FFT_OPM(cfg,rawData_rad_no_ref);
+
+
+
+
 
 %%
 cfg = [];
