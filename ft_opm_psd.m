@@ -67,10 +67,17 @@ method_for_fft = cfg.method;
 switch method_for_fft
     case 'fieldtrip'
         ft_warning('NOT TESTED DO NOT USE');
-        foi = [cfg.foi(1):0.01:cfg.foi(end)];
+        foi = [cfg.foi(1):0.05:cfg.foi(end)];
         
         disp(['Calculating PSD from ' num2str(cfg.foi(1)) 'Hz to ' ...
             num2str(cfg.foi(end)) 'Hz']);
+        
+        trial_length    = cfg.trial_length;
+        
+        cfg             = [];
+        cfg.length      = trial_length;
+        cfg.overlap     = 0;
+        rawData         = ft_redefinetrial(cfg, rawData);
         
         cfg2 = [];
         cfg2.output      = 'pow';          % Return PSD
@@ -85,12 +92,12 @@ switch method_for_fft
 
         figure;
         set(gcf,'Position',[100 100 1200 800]);
-        plot(psd_hann.freq,log(psd_hann.powspctrm));
+        semilogy(psd_hann.freq,psd_hann.powspctrm);
         set(gca,'FontSize',14);
         xlabel('Frequency (Hz)');
         ylabel('Power/Frequency (au^2/Hz)')
         hold on
-        plot(psd_hann.freq,mean(log(psd_hann.powspctrm)),'-k','LineWidth',2);
+        semilogy(psd_hann.freq,mean(log(psd_hann.powspctrm)),'-k','LineWidth',2);
         lgd = legend(vertcat(rawData.label, 'mean'));
         set(lgd,'Location','BestOutside');
         

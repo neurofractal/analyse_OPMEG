@@ -67,7 +67,7 @@ cfg                 = [];
 cfg.senstype        = 'megmag';
 cfg.trial_length    = 3;
 cfg.method          = 'tim';
-cfg.foi             = [2 100];
+cfg.foi             = [2 200];
 cfg.plot            = 'yes';
 pow                 = ft_opm_psd(cfg,rawData);
 
