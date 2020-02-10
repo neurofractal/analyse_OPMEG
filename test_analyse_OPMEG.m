@@ -21,8 +21,8 @@
 %% Paths (RS)
 fieldtripDir    = 'D:\scripts\fieldtrip-master';
 script_dir      = 'D:\Github\analyse_OPMEG';
-data_dir        = 'D:\data\AEF2\sub-001\ses-001\meg';
-save_dir        = 'D:\data\AEF2\sub-001\ses-001\meg';
+data_dir        = 'D:\data\AEF\sub-001\ses-001\meg';
+save_dir        = 'D:\data\AEF\sub-001\ses-001\meg';
 
 % Add Fieldtrip to path
 disp('Adding Fieldtrip and analyse_OPMEG to your MATLAB path');
@@ -46,7 +46,7 @@ cd(save_dir)
 % Read in the raw data.
 cfg             = [];
 cfg.precision   = 'single';
-cfg.data        = 'sub-001_ses-001_task-beep_run-001_meg.bin';
+cfg.data        = 'sub-001_ses-001_task-aef_run-001_meg.bin';
 rawData         = ft_opm_create(cfg);
 
 % Read in the raw data using BIDS
@@ -56,25 +56,34 @@ cfg.bids.task   = 'beep';
 cfg.bids.sub    = '001';
 cfg.bids.ses    = '001';
 cfg.bids.run    = '001';
-rawData2         = ft_opm_create(cfg);
+rawData2        = ft_opm_create(cfg);
 clear rawData2
 
 % Plot using ft_databrowser
 ft_databrowser([],rawData);
 
+%% Plot PSD
+cfg                 = [];
+cfg.senstype        = 'megmag';
+cfg.trial_length    = 3;
+cfg.method          = 'tim';
+cfg.foi             = [2 100];
+cfg.plot            = 'yes';
+pow                 = ft_opm_psd(cfg,rawData);
+
 %% Select the sensors of interest
 % Select only sensors measuring radial fields
-disp('Selecting ensors measuring radial fields only');
+disp('Selecting sensors measuring radial fields only');
 cfg             = [];
 cfg.channel     = vertcat('-G2-N1-RAD','-G2-MT-RAD','-G2-OJ-RAD',...
     rawData.label(contains(rawData.hdr.fieldori,'RAD')));
 rawData_rad     = ft_selectdata(cfg, rawData);
 
-% Plot PSD
-cfg = [];
-cfg.foi = [0:0.01:250];
-%cfg.remove_trig = 'yes';
-ft_FFT_OPM(cfg,rawData_rad);
+% % Plot PSD
+% cfg = [];
+% cfg.foi = [0:0.01:250];
+% %cfg.remove_trig = 'yes';
+% ft_FFT_OPM(cfg,rawData_rad);
 
 % Denoise
 cfg                     = [];
@@ -83,7 +92,7 @@ cfg.refchannel          = {'G2-N0-RAD','G2-N4-RAD','G2-N3-RAD','G2-MV-RAD'};
 cfg.truncate            = 'no';
 cfg.zscore              = 'no';
 cfg.updatesens          = 'yes';
-denoiseData             = ft_denoise_pca(cfg,rawData_rad);
+rawData_rad             = ft_denoise_pca(cfg,rawData_rad);
 
 cfg = [];
 cfg.resamplefs = 1000;
@@ -94,7 +103,7 @@ cfg = [];
 cfg.demean      = 'yes';
 cfg.continuous  = 'yes';
 cfg.bpfilter    = 'yes';
-cfg.bpfreq      = [1 30];
+cfg.bpfreq      = [2 30];
 rawData_rad         = ft_preprocessing(cfg,rawData_rad);
 
 % Plot using ft_databrowser
@@ -102,19 +111,10 @@ ft_databrowser([],rawData_rad);
 
 cfg = [];
 cfg.channel         = vertcat(rawData_rad.label,{'-G2-N0-RAD',...
-    '-G2-N4-RAD','-G2-N3-RAD','-G2-MV-RAD','-G2-OF-RAD'}');
+    '-G2-N4-RAD','-G2-N3-RAD','-G2-MV-RAD','-G2-OF-RAD','-G2-OK-RAD'}');
 rawData_rad_no_ref = ft_selectdata(cfg, rawData_rad);
 
 ft_databrowser([],rawData_rad_no_ref);
-
-cfg = [];
-cfg.foi = [0.5:0.01:40];
-%cfg.remove_trig = 'yes';
-ft_FFT_OPM(cfg,rawData_rad_no_ref);
-
-
-
-
 
 %%
 cfg = [];
