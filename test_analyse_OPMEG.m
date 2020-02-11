@@ -65,9 +65,9 @@ ft_databrowser([],rawData);
 %% Plot PSD
 cfg                 = [];
 cfg.senstype        = 'megmag';
-cfg.trial_length    = 3;
+cfg.trial_length    = 4;
 cfg.method          = 'tim';
-cfg.foi             = [2 200];
+cfg.foi             = [3 200];
 cfg.plot            = 'yes';
 pow                 = ft_opm_psd(cfg,rawData);
 
