@@ -23,17 +23,34 @@ end
 
 %% Try to determine the orientation of the sensors
 for i = 1:length(channels.name)
-    chan_end = channels.name{i}(end-2:end);
-    if strcmp(chan_end,'TAN')
-        channels.fieldori{i,1} = chan_end;
-    elseif strcmp(chan_end,'RAD')
-        channels.fieldori{i,1} = chan_end;
-    else
+    try
+        chan_end = channels.name{i}(end-2:end);
+        if strcmp(chan_end,'TAN')
+            channels.fieldori{i,1} = chan_end;
+        elseif strcmp(chan_end,'RAD')
+            channels.fieldori{i,1} = chan_end;
+        else
+            channels.fieldori{i,1} = 'UNKNOWN';
+        end
+    catch
         channels.fieldori{i,1} = 'UNKNOWN';
     end
 end
 
 %% Replace default names with Fieldtrip names
+% Remove the G2 part of the channel name
+try
+    % There is probably a more efficient way to do this...
+    indx = find(contains(channels.name,'G2'));
+    
+    for i = 1:length(indx)
+        to_replace = char(channels.name(indx(i)));
+        to_replace = to_replace(4:end);
+        channels.name(indx(i)) = {to_replace};
+    end
+catch
+end
+
 % Replace 'MEG' with 'megmag'
 try
     indx = find(contains(channels.type,'MEG'));
@@ -58,6 +75,15 @@ catch
     ft_warning('Cannot replace TRIG with trigger');
 end
 
+%%%%%%%%%
+% TO FIX
+%%%%%%%%%
+% If the channel name contains flux, change the channel type
+try
+    indx = contains(channels.name,'Flux');
+    channels.type(indx) = {'flux'};
+catch
+end
 
 
 
