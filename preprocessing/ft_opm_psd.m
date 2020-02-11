@@ -11,7 +11,7 @@ function [pow] = ft_opm_psd(cfg,rawData)
 %   cfg.foi             = frequencies of interest in form [X Y].
 %                       Default = [1 100]
 %   cfg.trial_length    = length of segments (in seconds). Default = 1.
-%   cfg.senstype        = 'all' or 'megmag' . Default = 'all'.
+%   cfg.channel        = 'all', 'MEG', 'RAD', 'TAN'. Default = 'all'.
 %   cfg.plot            = 'yes' or 'no'
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
@@ -22,8 +22,8 @@ function [pow] = ft_opm_psd(cfg,rawData)
 %__________________________________________________________________________
 
 %% Function housekeeping
-if ~isfield(cfg, 'senstype')
-    cfg.senstype = 'all';
+if ~isfield(cfg, 'channel')
+    cfg.channel = 'all';
 end
 
 if ~isfield(cfg, 'trial_length')
@@ -42,23 +42,20 @@ if ~isfield(cfg, 'plot')
     cfg.plot = 'yes';
 end
 
-%% Select the data based on cfg.senstype option
-if strcmp(cfg.senstype,'yes')
+%% Select the data based on cfg.channel option
+if strcmp(cfg.channel,'all')
     disp('Calculating PSD for ALL channels');
-elseif strcmp(cfg.senstype,'megmag')
+else
     try
-        disp('Keeping only megmag channels');
-        indx = contains(rawData.hdr.chantype,'megmag');
-        
+        chan = cfg.channel;
         cfg2 = [];
-        cfg2.channel = rawData.label(indx);
+        cfg2.channel = ft_channelselection_opm(chan,rawData,...
+            'quspin_g2');
         rawData = ft_selectdata(cfg2,rawData);
         
     catch
-        ft_warning('Could not select megmag channels');
+        ft_warning(['Could not select ' chan]);
     end
-else
-    disp('Calculating PSD for ALL channels');
 end
 
 %%
