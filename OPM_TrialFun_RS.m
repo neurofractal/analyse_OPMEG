@@ -6,7 +6,7 @@ cfg2.data        = cfg.dataset;
 rawData          = ft_opm_create(cfg2);
 
 hdr = rawData.hdr;
-pos_of_trig = find(contains(hdr.chantype,cfg.trialdef.trigchan));
+pos_of_trig = contains(hdr.chantype,cfg.trialdef.trigchan);
 
 % % Read header
 % hdr              = ft_read_header(strcat(cfg.dataset(1:end-3),'mat'));
@@ -49,9 +49,9 @@ trl = [];
 for j = 1:length(events)
     if isfield(cfg.trialdef,'downsample')
         fac = (rawData.fsample/cfg.trialdef.downsample);
-        trlbegin = (events(j) - (cfg.trialdef.prestim*(hdr.Fs./fac)));
-        trlend   = (events(j) + (cfg.trialdef.poststim*(hdr.Fs./fac)));
-        offset        = (-cfg.trialdef.prestim*(hdr.Fs./fac));
+        trlbegin = (events(j) - (cfg.trialdef.prestim*cfg.trialdef.downsample));
+        trlend   = (events(j) + (cfg.trialdef.poststim*cfg.trialdef.downsample));
+        offset        = (-cfg.trialdef.prestim*cfg.trialdef.downsample);
         trl(end+1, :) = ([trlbegin trlend offset 1]);
     else
         trlbegin = events(j) - cfg.trialdef.prestim*hdr.Fs;
