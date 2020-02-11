@@ -5,6 +5,6 @@
 
 Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 
-Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk)
+Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
           Nicholas Alexander  (n.alexander@ucl.ac.uk)
 
