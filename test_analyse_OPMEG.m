@@ -64,8 +64,8 @@ ft_databrowser([],rawData);
 
 %% Plot PSD
 cfg                 = [];
-cfg.channel         = 'TAN';
-cfg.trial_length    = 4;
+cfg.channel         = 'MEG';
+cfg.trial_length    = 3;
 cfg.method          = 'tim';
 cfg.foi             = [1 200];
 cfg.plot            = 'yes';
@@ -75,25 +75,17 @@ pow                 = ft_opm_psd(cfg,rawData);
 % Select only sensors measuring radial fields
 disp('Selecting sensors measuring radial fields only');
 cfg             = [];
-cfg.channel     = ft_channelselection_opm('RAD',rawData,'quspin_g2');
+cfg.channel     = ft_channelselection_opm('RAD',rawData);
 rawData_meg     = ft_selectdata(cfg, rawData);
-
-% % Plot PSD
-% cfg = [];
-% cfg.foi = [0:0.01:250];
-% %cfg.remove_trig = 'yes';
-% ft_FFT_OPM(cfg,rawData_rad);
 
 % Denoise
 cfg                     = [];
-cfg.refchannel          = ft_channelselection_opm('megref',rawData,'quspin_g2');
+cfg.refchannel          = ft_channelselection_opm('megref',rawData);
 %cfg.channel             = [ncfg.chaninfo.channel];
 cfg.truncate            = 'no';
 cfg.zscore              = 'no';
 cfg.updatesens          = 'yes';
 rawData_denoised        = ft_denoise_pca(cfg,rawData_meg);
-
-
 
 cfg = [];
 cfg.resamplefs = 1000;

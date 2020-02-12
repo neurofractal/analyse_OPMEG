@@ -1,10 +1,15 @@
 
 
 
-[channel] = ft_channelselection_opm('MEG', rawData, 'quspin_g2')
+[channel] = ft_channelselection_opm('MEG', rawData)
 
-[channel2] = ft_channelselection_opm('RAD', rawData, 'quspin_g2')
+cfg = [];
+cfg.channel = ft_channelselection_opm('MEG', rawData);
+MEG = ft_selectdata(cfg,rawData);
 
+cfg = [];
+cfg.channel = ft_channelselection_opm('RAD', MEG);
+MEG2 = ft_selectdata(cfg,MEG);
 
 cfg = [];
 cfg.channel = {'all','-NI-TRIG'};

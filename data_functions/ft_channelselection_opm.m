@@ -83,7 +83,7 @@ if isempty(desired)
 end
 
 if nargin<3 || isempty(senstype)
-  senstype = ft_senstype(datachannel);
+  senstype = 'quspin_g2';
 end
 
 % this will be specified further down
@@ -101,6 +101,31 @@ elseif isstruct(datachannel) && isfield(datachannel, 'label')
   datachantype = ft_chantype(hdr);
   try 
     dataoritype = hdr.hdr.fieldori;
+    
+    if length(dataoritype) ~= length(datachannel)
+        ft_warning(['Unequal number of channels between label'...
+            ' and hdr.fieldori fields ... Attempting to extract fieldori'...
+            ' from label names instead']);
+        
+        dataoritype = [];
+        
+        for i = 1:length(datachannel)
+            try
+                chan_end = datachannel{i}(end-2:end);
+                if strcmp(chan_end,'TAN')
+                    dataoritype{i,1} = chan_end;
+                elseif strcmp(chan_end,'RAD')
+                    dataoritype{i,1} = chan_end;
+                else
+                    dataoritype{i,1} = 'UNKNOWN';
+                end
+            catch
+                dataoritype{i,1} = 'UNKNOWN';
+            end
+        end
+    end
+
+    
   catch
     dataoritype = [];
   end
