@@ -98,7 +98,8 @@ if use_bids
     catch
     error('Did you specify all the required cfg.bids information?')
     end
-    path_to_bin_file = fullfile(cfg.folder,file_name_bids);
+    path_to_bin_file = fullfile(cfg.folder,['sub-' cfg.bids.sub],...
+        ['ses-' cfg.bids.ses],'meg',file_name_bids);
 end
 
 %% Read Binary File
