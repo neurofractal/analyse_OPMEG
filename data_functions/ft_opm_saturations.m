@@ -8,14 +8,17 @@ function [sat] = ft_opm_saturations(cfg,data)
 % loaded using ft_opm_create
 % 
 %   cfg.channel        = 'all', 'MEG', 'RAD', 'TAN'. Default = 'MEG'.
-%   cfg.plot            = 'yes' or 'no'
+%   cfg.plot           = 'yes' or 'no'
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
-% Adapted from spm_opm_create (Tim Tierney)
-
-% Authors:  Nicholas Alexander  (n.alexander@ucl.ac.uk)
-%           Robert Seymour      (rob.seymour@ucl.ac.uk) 
+%
+% Author: Robert Seymour      (rob.seymour@ucl.ac.uk) 
 %__________________________________________________________________________
+%
+% Currently this function is a little hack-y, and relies upon two hard
+% coded variables: window size (currently 0.1s) and threshold for range
+% (currently windows with a range of less than 5000T are marked as 
+% saturated). There is probably a better way to do this?
 
 %% Set default values
 if ~isfield(cfg, 'channel')
@@ -43,12 +46,9 @@ else
 end
 
 %%
-method      = cfg.method;
-min_length  = cfg.min_length;
 plot        = cfg.plot;
 
 %% Start of the code 
-
 sat = [];
 count = 1;
 
@@ -117,9 +117,6 @@ for chan = 1:length(data.label)
 end
 
 ft_progress('close');
-
-
-
 
 if ~isempty(sat)
     
