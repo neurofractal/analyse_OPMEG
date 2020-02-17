@@ -2,7 +2,7 @@ function [pow] = ft_opm_psd(cfg,rawData)
 % Function to calculate PSD on optically-pumped magnetencephalography
 % (OPMEG) data acquired from the UCL Wellcome Centre for Neuroimaging.
 %
-% EXAMPLE USEAGE:   data = ft_opm_psd(cfg)
+% EXAMPLE USEAGE:   data = ft_opm_psd(cfg,rawData)
 % ...where, cfg is the input structure and rawData is the raw OPM data
 % loaded using ft_opm_create
 %
