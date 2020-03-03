@@ -183,62 +183,6 @@ for i = 1:size(sensorListing, 1)
     % Add direction (rad)
     Ztan(i,1:3)                 = conePoint - bottomEndPoint(1:3);
     
-    
-    
-    % The next step is to add the rad direction. First find the midpoint of
-    % the two ends. 
-    % Get the longest line from the bottom and top sensors. 
-    
-    % There is a point halfway between the short side (long side is 2
-    % points). Find the point halfway between the bottom points and the
-    % same for the top. Check if it is a point.
-    
-    %%%%%%%%%%%%%%%%% DO Tomorrow %%%%%%%%%%%%%%%%%%%
-    % you just need to find the shortest side of the bottom. That is the
-    % short edge. Then find the vector (or whatever) to the conePoint. that
-    % is the Rad axis. 
-    
-    
-    
-    
-    
-%     combinations = nchoosek(1:3,2);
-%     for combIdx = 1:length(combinations)
-%         bottomDistances(combIdx) = pdist([bottomCornerPoints(combinations(combIdx,1),1:3);bottomCornerPoints(combinations(combIdx,2),1:3)]);
-%         topDistances(combIdx) = pdist([topCornerPoints(combinations(combIdx,1),1:3);topCornerPoints(combinations(combIdx,2),1:3)]);
-%     end
-%     
-%     % The medium distance is the one to look for between top and bottom.
-%     medDist = median([bottomDistances;topDistances],'all');
-%     
-%     % Find the distances between the bottom and top corners.
-%     for topIdx = 1:3
-%         for botIdx = 1:3
-%             topBotDistance(topIdx,botIdx)     = pdist([bottomCornerPoints(botIdx,1:3);topCornerPoints(topIdx,1:3)]);
-%         end
-%     end
-%     
-%     % Closest points are on the same side.
-%     minDist     = min(min(topBotDistance));
-%     topBotDistance = round(topBotDistance,4);
-%     minIdx      = imregionalmin(topBotDistance);
-%     [pair1, pair2] = find(minIdx);
-%     
-%     cornerCount = [1, 2, 3];    
-%     
-%     pairs = [pair1,pair2];
-%     remPair = find(~ismember(cornerCount,[pair1(2),pair2(2)]));
-% 
-%     % arbitrary left and right labels
-%     leftPoints  = [topCornerPoints(pairs(1,1),1:3);bottomCornerPoints(pairs(1,2),1:3)];
-%     rightPoints = [topCornerPoints(pairs(2,1),1:3);bottomCornerPoints(pairs(2,2),1:3)];
-%     
-%     hold on
-%     patch('Faces',Mesh.Faces{i},'Vertices',Mesh.Points{i},'FaceAlpha',.1,'EdgeAlpha',.25)
-%     scatter3(leftPoints(:,1),leftPoints(:,2),leftPoints(:,3));
-%     scatter3(rightPoints(:,1),rightPoints(:,2),rightPoints(:,3));
-%     quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), Z(:,1), Z(:,2), Z(:,3));
-% 
 end
     
 %% Show
