@@ -145,11 +145,6 @@ for i = 1:size(sensorListing, 1)
 
     % Shortest distance goes along the ends.
     [~, bottomEndComb]      = min(bottomCornerDistance);
-
-    
-    % Starting to realise top and bottom are the same. At least for this
-    % one. Oh well. Also, bottom might not necessarily be bottom. Use cone
-    % later to check. 
     
     % Average position of the furthest apart pairs. 
     topMiddlePoint          = mean(vertcat(topCornerPoints(combinations(topMiddleComb,1),:),topCornerPoints(combinations(topMiddleComb,2),:)));
