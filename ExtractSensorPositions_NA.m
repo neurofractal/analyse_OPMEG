@@ -1,11 +1,4 @@
 % Script to save all sensor locations and orientations for headcasts
-
-% TODO:
-% - fix axis problem - if sensor is perfectly aligned with one axis, can't
-% find the corner points the way I've currently done it
-% - find a way to set front of head for tangential sensors. For the radial
-% ones, choose the sensor end either from the points on Mark's STL file or
-% the center of the headcast
 %
 % NA Edit of Steph's code
 
@@ -44,14 +37,8 @@ sensorPoints = true;
 %% main
 sensorListing = dir([STLdir '\*.stl']);
 centrePoint = zeros(size(sensorListing, 1), 3);
-% X = zeros(size(sensorListing, 1), 3);
-% Y = zeros(size(sensorListing, 1), 3);
 Zrad    = zeros(size(sensorListing, 1), 3);
 Ztan    = zeros(size(sensorListing, 1), 3);
-% 
-% if ~sensorPoints
-%     faceCentersVec = zeros(2, 3, size(sensorListing,1));
-% end
 
 for i = 1:size(sensorListing, 1)
     [F, V] = stlread(fullfile(sensorListing(i).folder, sensorListing(i).name));
@@ -145,9 +132,6 @@ for i = 1:size(sensorListing, 1)
         bottomCornerPoints  = cornerPoints(bottomCornerIdx,:);
     end
 
-    
-    
-    
     % Find the distances between the top corner points.
     combinations = nchoosek(1:3, 2);
     for combIdx = 1:length(combinations)
@@ -201,16 +185,6 @@ for i = 1:size(sensorListing, 1)
     patch('Faces',Mesh.Faces{i},'Vertices',Mesh.Points{i},'FaceAlpha',.1,'EdgeAlpha',0)
 end
 hold off
-
-% % Try plotting in fieldtrip
-% sensTmp = [];
-% sensTmp.chanori = Zrad;
-% sensTmp.chanpos = centrePoint;
-% sensTmp.label   = num2cell(1:75)';
-% sensTmp.type = 'yokogawa160';
-% sensTmp.unit = 'cm';
-% ft_plot_sens(sensTmp,'orientation','true');
-
 
 % For determining whether to flip the orientation or not plot one sensor
 % onto the scalp at a time.
@@ -289,10 +263,3 @@ grad.label      = label';
 %% Next step is to combine this with a file to get the actual position of the cell. 
 % Provide some info on which way the sensor is put into the slot. 
 
-%% Write to file
-
-A = [1:size(pos,1); pos'; X'; Y'; Zrad'];
-fileID = fopen(fullfile(savePath, 'Headcast_allAxes.txt'),'w');
-fprintf(fileID,'%6s %12s %12s %12s %6s %6s %6s %6s %6s %6s %6s %6s %6s\n','SlotNo', 'Position_x', 'Position_y', 'Position_z', 'X_x', 'X_y', 'X_z', 'Y_x', 'Y_y', 'Y_z', 'Z_x', 'Z_y', 'Z_z');
-fprintf(fileID,'%6.f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f %12.8f\n',A);
-fclose(fileID);
