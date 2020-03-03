@@ -184,7 +184,7 @@ for i = 1:size(sensorListing, 1)
     Ztan(i,1:3)                 = conePoint - bottomEndPoint(1:3);
     
 end
-    
+
 %% Show
 figure;
 hold on;
@@ -235,6 +235,14 @@ for i = 1:size(sensorListing, 1)
     close all
 end
 
+% Alternatively, specify the numbers to be flipped.
+flipSensors = input('Form [1 56]: ');
+
+for i = 1:length(flipSensors)
+    Ztan(flipSensors(i),1:3)    = -Ztan(flipSensors(i),1:3);
+end
+
+
 
 %% Normalise
 for i = 1:length(Zrad(:,1))
@@ -264,19 +272,7 @@ patch('Faces',F3,'Vertices',V3,'FaceAlpha',.1,'EdgeAlpha',0)
 
 hold off
 
-
-
-% Try plotting in fieldtrip
-sensTmp = [];
-sensTmp.chanori = Zrad;
-sensTmp.chanpos = centrePoint;
-sensTmp.label   = num2cell(1:75)';
-sensTmp.type = 'yokogawa160';
-sensTmp.unit = 'cm';
-ft_plot_sens(sensTmp,'orientation','true');
-
 % Make the grad structure.
-
 for i = 1:size(sensorListing, 1)
     label{i}    = strcat(num2str(i),'_rad');
     label{i+size(sensorListing, 1)}     = strcat(num2str(i),'_tan');
