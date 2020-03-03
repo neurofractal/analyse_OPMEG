@@ -36,7 +36,7 @@ clear templatesDir fieldtripDir matlabDir functionsDir atlasDir pcName
 sensorsRad = false;
 
 % Input file path
-STLdir = strcat(workingDir,'\Data\STL_Positions\Hingecast\SensorSTLs');
+STLdir = strcat(workingDir,'\Data\STL_Positions\Hingecast\SensorSTLs_RS');
 
 % Check if sensor stls have points at sensor end
 sensorPoints = true;
@@ -87,39 +87,66 @@ for i = 1:size(sensorListing, 1)
     % Find 6th corner
     [~, I{6}] = max(V2(:,3), [], 1);
     
-    for j = 1:6
-        if size(I{j}) > 1
-            disp('Error - Sensor is aligned with axis');
+    % Are all the corners unique?
+    fixAlignedSensor = false;
+    if length(unique(cell2mat(I))) < 6
+        disp('Error - Sensor is aligned with axis');
+        fixAlignedSensor = true;
+    end
+    
+    if fixAlignedSensor
+        % How else can I find the corners?
+        % Furthest point from cone to get top.
+        for pointIdx = 1:length(V2(:,1))
+            pointConeDist(pointIdx) = pdist([conePoint;V2(pointIdx,1:3)]);
         end
+        pointConeDist = round(pointConeDist,3);
+        topCornerPointsIdx = find(pointConeDist == max(pointConeDist));
+        topCornerPoints     = V2(topCornerPointsIdx,1:3);
+        % Find the furthest away points from each of those. Should be 4. To
+        % work with the rest of the code just remove one of them.
+        topCornerPoints = topCornerPoints(1:3,1:3);
+        for topCornerPointsIdx = 1:length(topCornerPoints(:,1))
+            for pointIdx = 1:length(V2(:,1))
+                pointCornerDist(pointIdx) = pdist([topCornerPoints(topCornerPointsIdx,1:3);V2(pointIdx,1:3)]);
+            end
+            pointCornerDist = round(pointCornerDist,3);
+            % there should just be one point that is far away. The opposite
+            % corner.
+            bottomCornerPointsIdx(topCornerPointsIdx) = find(pointCornerDist == max(pointCornerDist));
+        end
+        bottomCornerPoints     = V2(bottomCornerPointsIdx,1:3);
+    else
+
+
+        % Find sides between corners
+        combinations = nchoosek(1:6, 2);
+        s = zeros(size(combinations, 1), 3);
+        for j = 1:size(combinations, 1)
+            s(j, :) = V2(I{combinations(j,1)},:) - V2(I{combinations(j,2)},:);
+        end
+
+        cornerPoints     = zeros(6,3);
+        for cornerIdx = 1:6
+            cornerPoints(cornerIdx,1:3)  = V2(I{cornerIdx},1:3);
+        end
+        % Distance from each corner to the cone. 
+        cornerConeDist = zeros(1,6);
+        for cornerIdx = 1:6
+            cornerConeDist(cornerIdx)  = pdist(vertcat(V2(coneIdx,:),cornerPoints(cornerIdx,:)));
+        end
+
+        % The 3 greater cornerCondDist are the top and the three lesser are the
+        % bottom. Identify them.
+        topCornerIdx        = (cornerConeDist > median(cornerConeDist));
+        bottomCornerIdx     = (cornerConeDist < median(cornerConeDist));
+
+        topCornerPoints     = cornerPoints(topCornerIdx,:);
+        bottomCornerPoints  = cornerPoints(bottomCornerIdx,:);
     end
-    
-    % Find sides between corners
-    combinations = nchoosek(1:6, 2);
-    s = zeros(size(combinations, 1), 3);
-    for j = 1:size(combinations, 1)
-        s(j, :) = V2(I{combinations(j,1)},:) - V2(I{combinations(j,2)},:);
-    end
-   
-    cornerPoints     = zeros(6,3);
-    for cornerIdx = 1:6
-        cornerPoints(cornerIdx,1:3)  = V2(I{cornerIdx},1:3);
-    end
+
     
     
-    
-    % Distance from each corner to the cone. 
-    cornerConeDist = zeros(1,6);
-    for cornerIdx = 1:6
-        cornerConeDist(cornerIdx)  = pdist(vertcat(V2(coneIdx,:),cornerPoints(cornerIdx,:)));
-    end
-    
-    % The 3 greater cornerCondDist are the top and the three lesser are the
-    % bottom. Identify them.
-    topCornerIdx        = (cornerConeDist > median(cornerConeDist));
-    bottomCornerIdx     = (cornerConeDist < median(cornerConeDist));
-    
-    topCornerPoints     = cornerPoints(topCornerIdx,:);
-    bottomCornerPoints  = cornerPoints(bottomCornerIdx,:);
     
     % Find the distances between the top corner points.
     combinations = nchoosek(1:3, 2);
@@ -231,24 +258,21 @@ for i = 1:size(sensorListing, 1)
 end
 hold off
 
-% Try plotting in fieldtrip
-sensTmp = [];
-sensTmp.chanori = Zrad;
-sensTmp.chanpos = centrePoint;
-sensTmp.label   = num2cell(1:75)';
-sensTmp.type = 'yokogawa160';
-sensTmp.unit = 'cm';
-ft_plot_sens(sensTmp,'orientation','true');
+% % Try plotting in fieldtrip
+% sensTmp = [];
+% sensTmp.chanori = Zrad;
+% sensTmp.chanpos = centrePoint;
+% sensTmp.label   = num2cell(1:75)';
+% sensTmp.type = 'yokogawa160';
+% sensTmp.unit = 'cm';
+% ft_plot_sens(sensTmp,'orientation','true');
 
-% 
-% % For determining whether to flip the orientation or not plot one sensor
-% % onto the scalp at a time.
-% figure;
-% hold on
-% STLdir = strcat(workingDir,'\Data\STL_Positions\Hingecast\Gareth Head.stl');
-% sensorListing = dir(STLdir);
-% [F, V] = stlread(fullfile(sensorListing.folder, sensorListing.name));
-% patch('Faces',F,'Vertices',V,'FaceAlpha',.1,'EdgeAlpha',0)
+
+% For determining whether to flip the orientation or not plot one sensor
+% onto the scalp at a time.
+STLdir2 = strcat(workingDir,'\Data\STL_Positions\Hingecast\Gareth Head.stl');
+sensorListing2 = dir(STLdir2);
+[F3, V3] = stlread(fullfile(sensorListing2.folder, sensorListing2.name));
 
 
 % plot the STLs as well
@@ -291,6 +315,9 @@ daspect([1 1 1])
 for i = 1:size(sensorListing, 1)
     patch('Faces',Mesh.Faces{i},'Vertices',Mesh.Points{i},'FaceAlpha',.1,'EdgeAlpha',0)
 end
+
+patch('Faces',F3,'Vertices',V3,'FaceAlpha',.1,'EdgeAlpha',0)
+
 hold off
 
 
