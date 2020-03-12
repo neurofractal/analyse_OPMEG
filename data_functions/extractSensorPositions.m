@@ -59,9 +59,71 @@ for sensorIdx = 1:size(sensorListing, 1)
     end
     
     % Just the 8 greatest distances.
-    [~,distRank]         = sort(meanVertDist);
+    [~,distRank]        = sort(meanVertDist);
     cornerIdx           = distRank(end-7:end);
     cornerVerts         = redVerts(cornerIdx,1:3);
+    
+    % Up to here, everything works. But need a different way of finding the
+    % groups of sensors (top/bottom).
+    
+    % Find the distance between all the corner combinations.
+    combinations        = nchoosek(1:length(cornerVerts(:,1)),2);
+    cornerDist          = zeros(length(combinations(:,1)),1);
+    for combIdx = 1:length(combinations(:,1))
+        cornerDist(combIdx,1)   = pdist([cornerVerts(combinations(combIdx,1),:);cornerVerts(combinations(combIdx,2),:)]);
+    end
+    
+    % Round it out and sort it out.
+    cornerDist          = round(cornerDist,2);
+    uniqueCornerDists   = sort(unique(cornerDist));
+    
+    % Remove the hypotenusesese.
+    combinations    = nchoosek(1:length(uniqueCornerDists),2);
+    hypoIdx       = zeros(length(uniqueCornerDists),length(combinations(:,1)));
+    for combIdx = 1:length(combinations(:,1))
+        RMS             = sqrt(uniqueCornerDists(combinations(combIdx,1))^2 + uniqueCornerDists(combinations(combIdx,2))^2);
+        RMS             = round(RMS,2);
+        [~,hypoIdx(:,combIdx)]    = ismember(uniqueCornerDists,RMS);
+    end
+    hypoIdx     = (sum(hypoIdx,2)>0);
+    
+    % The remaining distances are along the outside edges.
+    edgeDists   = uniqueCornerDists(~hypoIdx);
+    
+    % Remove the shortest because that is the height
+    edgeDists(edgeDists == min(edgeDists)) = [];
+    
+    % Take a vertex and find the connected vertices. 
+    firstGroupCornerVerts   = zeros(length(cornerVerts(:,1))/2,length(cornerVerts(1,:)));
+    remCornerVerts          = cornerVerts;
+    nextDist                = 1;
+    for cornerIdx = 1:length(firstGroupCornerVerts(:,1))
+        if cornerIdx == 1
+            firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(cornerIdx,:);
+            remCornerVerts(1,:)                 = [];
+        else
+            dist        = zeros(length(remCornerVerts(:,1)),1);
+            for remIdx = 1:length(remCornerVerts(:,1))
+                dist(remIdx,1)  = pdist([firstGroupCornerVerts(cornerIdx-1,:);remCornerVerts(remIdx,:)]);
+            end
+            dist    = round(dist,2);
+            % Long or short edge this time?
+            if nextDist == 1
+                nextDist = 2;
+            elseif nextDist == 2
+                nextDist = 1;
+            end
+
+            nextCornerIdx                       = (dist == edgeDists(nextDist));
+            firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(nextCornerIdx,:);
+            remCornerVerts(cornerIdx,:)         = [];
+        end
+    end
+    
+    % The remaining corner verts are the second group.
+    secondGroupCornerVerts  = remCornerVerts;
+    
+    % Take the mean position of each grouping.
     
     % Find the distance between each sensor and the centre of the head.
     cornerCentreDist    = zeros(length(cornerVerts(:,1)),1);
