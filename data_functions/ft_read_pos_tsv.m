@@ -23,11 +23,26 @@ opts.EmptyLineRule      = "read";
 
 % Import the data
 posAll                  = table2struct(readtable(filename, opts),'ToScalar',true);
+
 pos.label               = posAll.label;
 pos.chanpos             = [posAll.Px posAll.Py posAll.Pz];
 pos.chanori             = [posAll.Ox posAll.Oy posAll.Oz];
 
 pos.label = cellstr(pos.label);
+
+% Remove the G2 part of the channel name
+try
+    % There is probably a more efficient way to do this...
+    indx = find(contains(pos.label,'G2'));
+    
+    for i = 1:length(indx)
+        to_replace = char(pos.label(indx(i)));
+        to_replace = to_replace(4:end);
+        pos.label(indx(i)) = {to_replace};
+    end
+catch
+end
+
 end
 
 
