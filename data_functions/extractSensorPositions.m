@@ -1,4 +1,4 @@
-function sensorInfo = extractSensorPositions(folder,slotOri,plot,correct,scalp,outputfile)
+function sensorInfo = extractSensorPositions(cfg)
 % Extracts the orientations (rad and tan, sensor space)and the position of
 % sensors described by STL files.
 % 
@@ -27,7 +27,7 @@ function sensorInfo = extractSensorPositions(folder,slotOri,plot,correct,scalp,o
 % (12/03/2020)
 
 % Input file path and find all STL files. 
-STLdir              = strcat(folder);
+STLdir              = strcat(cfg.folder);
 sensorListing       = dir([STLdir '\*.stl']);
 
 % We need to know the centre point of all sensors as a rough indication of
@@ -41,7 +41,7 @@ for sensorIdx = 1:size(sensorListing, 1)
 end
 headCentreVert  = mean(meanPos,1);
 
-clear meanPos sensorIdx verts sensorFilename STLdir folder
+clear meanPos sensorIdx verts sensorFilename STLdir
 
 
 % Preallocate the main outputs. 
@@ -117,12 +117,12 @@ for sensorIdx = 1:size(sensorListing, 1)
     % If the slot rad and head rad are aligned than it is short edge down
     % so remove the longest edge. Otherwise it is long edge, so remove the
     % shortest edge.
-    if strcmp(slotOri,'rad')
+    if strcmp(cfg.slotori,'rad')
         edgeDists(edgeDists == max(edgeDists)) = [];
-    elseif strcmp(slotOri,'tan')
+    elseif strcmp(cfg.slotori,'tan')
         edgeDists(edgeDists == min(edgeDists)) = [];
     else
-        error('Specify either slotOri = rad or tan')
+        error('Specify either cfg.slotori = rad or tan')
     end
     
     % Take a vertex and find the connected vertices. 
@@ -197,10 +197,10 @@ for sensorIdx = 1:size(sensorListing, 1)
     % Very confusing, but if the sensors are in 'tan' orientation slots,
     % then that means the tan of the sensor is aligned with the rad of the
     % head. Need to avvound for that. 
-    if strcmp(slotOri,'rad')
+    if strcmp(cfg.slotori,'rad')
         radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
         tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
-    elseif strcmp(slotOri,'tan')
+    elseif strcmp(cfg.slotori,'tan')
         radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
         tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
     end
@@ -217,7 +217,7 @@ for sensorIdx = 1:size(sensorListing, 1)
 end
 
 % Plot the result
-if plot
+if cfg.plot
     figure(1);
     hold on;
     grid on;
@@ -230,8 +230,8 @@ if plot
         patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.3,'EdgeAlpha',0);
     end
     
-    if ~isempty(scalp)
-        patch('Faces',scalp.Faces,'Vertices',scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+    if ~isempty(cfg.scalp)
+        patch('Faces',cfg.scalp.Faces,'Vertices',cfg.scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
     end
     hold off
     
@@ -242,13 +242,13 @@ end
 
 % For determining whether to flip the orientation or not plot one sensor
 % onto the scalp at a time.
-if correct
+if cfg.correct
     repeat = 1;
     while repeat
         for sensorIdx = 1:size(sensorListing, 1)
             hold on
-            if ~isempty(scalp)
-                patch('Faces',scalp.Faces,'Vertices',scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+            if ~isempty(cfg.scalp)
+                patch('Faces',cfg.scalp.Faces,'Vertices',cfg.scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
             end
             patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0)
             quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
@@ -277,9 +277,9 @@ filename    = [filename_rad;filename_tan];
     Oy          = [radOri(:,2);tanOri(:,2)];
     Oz          = [radOri(:,3);tanOri(:,3)];
     outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
-if ~isempty(outputfile)
+if ~isempty(cfg.outputfile)
     
-    writetable(outputTable,strcat(outputfile,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
+    writetable(outputTable,strcat(cfg.outputfile,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
 end
 
 sensorInfo      = outputTable;
