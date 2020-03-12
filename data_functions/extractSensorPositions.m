@@ -1,4 +1,4 @@
-function grad = extractSensorPositions(folder,slotOri)
+function sensorInfo = extractSensorPositions(folder,slotOri,plot,correct,scalp,outputFilename)
 % Extracts the orientations (rad and tan, sensor space)and the position of
 % sensors described by STL files.
 %
@@ -31,11 +31,16 @@ radOri              = zeros(size(sensorListing, 1), 3);
 tanOri              = zeros(size(sensorListing, 1), 3);
 sensorFaces         = cell(size(sensorListing, 1), 3);
 sensorVerts         = cell(size(sensorListing, 1), 3);
+filename_rad        = cell(size(sensorListing, 1), 3);
+filename_tan        = cell(size(sensorListing, 1), 3);
 
 for sensorIdx = 1:size(sensorListing, 1)
     % Specifiy and read in sensor STLs one at a time. 
-    sensorFilename      = fullfile(sensorListing(sensorIdx).folder,sensorListing(sensorIdx).name);
-    [faces, verts]      = stlread(sensorFilename);
+    sensorFilename  = fullfile(sensorListing(sensorIdx).folder,sensorListing(sensorIdx).name);
+    [faces, verts]              = stlread(sensorFilename);
+    
+    filename_rad{sensorIdx}     = strcat(sensorFilename,'_rad');
+    filename_tan{sensorIdx}     = strcat(sensorFilename,'_tan');
     
     % Reduce the vertices by removing duplicate positions. This will help
     % later on. For example, it avoids there being duplicate corners which
@@ -47,7 +52,7 @@ for sensorIdx = 1:size(sensorListing, 1)
     for redVertIdx = 1:length(redVerts(:,1))
         vertRepeatIdx           = find(ismember(verts,redVerts(redVertIdx,:),'rows'));
         faceRepeatIdx           = find(ismember(faces,vertRepeatIdx));
-        redFaces(faceRepeatIdx) = redVertIdx;
+        redFaces(faceRepeatIdx) = redVertIdx; %#ok<FNDSB>
     end
     
     % We can find the corners by finding the points furthest from the mean
@@ -90,8 +95,16 @@ for sensorIdx = 1:size(sensorListing, 1)
     % The remaining distances are along the outside edges.
     edgeDists   = uniqueCornerDists(~hypoIdx);
     
-    % Remove the shortest because that is the height
-    edgeDists(edgeDists == min(edgeDists)) = [];
+    % If the slot rad and head rad are aligned than it is short edge down
+    % so remove the longest edge. Otherwise it is long edge, so remove the
+    % shortest edge.
+    if strcmp(slotOri,'rad')
+        edgeDists(edgeDists == max(edgeDists)) = [];
+    elseif strcmp(slotOri,'tan')
+        edgeDists(edgeDists == min(edgeDists)) = [];
+    else
+        error('Specify either slotOri = rad or tan')
+    end
     
     % Take a vertex and find the connected vertices. 
     firstGroupCornerVerts   = zeros(length(cornerVerts(:,1))/2,length(cornerVerts(1,:)));
@@ -116,7 +129,7 @@ for sensorIdx = 1:size(sensorListing, 1)
 
             nextCornerIdx                       = (dist == edgeDists(nextDist));
             firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(nextCornerIdx,:);
-            remCornerVerts(cornerIdx,:)         = [];
+            remCornerVerts(nextCornerIdx,:)         = [];
         end
     end
     
@@ -124,17 +137,20 @@ for sensorIdx = 1:size(sensorListing, 1)
     secondGroupCornerVerts  = remCornerVerts;
     
     % Take the mean position of each grouping.
+    firstGroupCentreVert    = mean(firstGroupCornerVerts,1);
+    secondGroupCentreVert   = mean(secondGroupCornerVerts,1);
     
-    % Find the distance between each sensor and the centre of the head.
-    cornerCentreDist    = zeros(length(cornerVerts(:,1)),1);
-    for cornerIdx = 1:length(cornerVerts(:,1))
-        cornerCentreDist(cornerIdx,1) = pdist([cornerVerts(cornerIdx,1:3);headCentreVert]);
-    end
+    % Which is closer to the centre of the head?
+    firstGroupCentreDist    = pdist([firstGroupCentreVert;headCentreVert]);
+    secondGroupCentreDist   = pdist([secondGroupCentreVert;headCentreVert]);
     
-    % The closest four will be the bottom corners.
-    bottomCornerIdx     = (cornerCentreDist < median(cornerCentreDist));
-    bottomCornerVerts   = cornerVerts(bottomCornerIdx,1:3);
-    topCornerVerts      = cornerVerts(~bottomCornerIdx,1:3);
+    if (firstGroupCentreDist < secondGroupCentreDist)
+        bottomCornerVerts   = firstGroupCornerVerts;
+        topCornerVerts      = secondGroupCornerVerts;
+    elseif (firstGroupCentreDist > secondGroupCentreDist)
+        bottomCornerVerts   = secondGroupCornerVerts;
+        topCornerVerts      = firstGroupCornerVerts;
+    end   
 
     % Find the distances between the top corner points.
     combinations = nchoosek(1:4, 2);
@@ -159,11 +175,16 @@ for sensorIdx = 1:size(sensorListing, 1)
     
     bottomEndPoint              = mean(vertcat(bottomCornerVerts(combinations(bottomEndComb,1),:),bottomCornerVerts(combinations(bottomEndComb,2),:)));
     
-    % Add orientation (tan)
-    radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
-        
-    % Add orientation (rad)
-    tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+    % Very confusing, but if the sensors are in 'tan' orientation slots,
+    % then that means the tan of the sensor is aligned with the rad of the
+    % head. Need to avvound for that. 
+    if strcmp(slotOri,'rad')
+        radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
+        tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+    elseif strcmp(slotOri,'tan')
+        radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
+        tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+    end
     
     % Normalise the orientations
     L                           = sqrt(radOri(sensorIdx,1)^2 + radOri(sensorIdx,2)^2 + radOri(sensorIdx,3)^2);
@@ -176,91 +197,70 @@ for sensorIdx = 1:size(sensorListing, 1)
     sensorVerts{sensorIdx}(:,1:3)   = redVerts;
 end
 
-%% Show
-figure;
-hold on;
-grid on;
-quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), radOri(:,1), radOri(:,2), radOri(:,3));
-quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
-
-scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
-text(centrePoint(:,1)-1.5*radOri(:,1),centrePoint(:,2)-1.5*radOri(:,2),centrePoint(:,3)-1.5*radOri(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
-daspect([1 1 1])
-
-% plot the STLs as well
-for sensorIdx = 1:size(sensorListing, 1)
-    patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0);
-
+% Plot the result
+if plot
+    figure(1);
+    hold on;
+    grid on;
+    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), radOri(:,1), radOri(:,2), radOri(:,3));
+    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
+    scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
+    text(centrePoint(:,1)-1.5*radOri(:,1),centrePoint(:,2)-1.5*radOri(:,2),centrePoint(:,3)-1.5*radOri(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
+    daspect([1 1 1])
+    for sensorIdx = 1:size(sensorListing, 1)
+        patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.3,'EdgeAlpha',0);
+    end
+    
+    if ~isempty(scalp)
+        patch('Faces',scalp.Faces,'Vertices',scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+    end
+    hold off
+    
+    % Ask if they are done with it.
+    input('Press any key to continue (closes figure)')
+    close all % Change this later. 
 end
-hold off
 
-% 
-% % For determining whether to flip the orientation or not plot one sensor
-% % onto the scalp at a time.
-% STLdir2 = strcat(workingDir,'\Data\STL_Positions\Hingecast\Gareth Head.stl');
-% sensorListing2 = dir(STLdir2);
-% [F3, V3] = stlread(fullfile(sensorListing2.folder, sensorListing2.name));
-% 
-% 
-% % plot the STLs as well
-% for sensorIdx = 1:size(sensorListing, 1)
-%     hold on
-%     patch('Faces',Mesh.Faces{sensorIdx},'Vertices',Mesh.Points{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0)
-%     quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
-%     scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
-%     flip = input('flip?');
-%     if flip == 1
-%         decision(sensorIdx) = true;
-%         tanOri(sensorIdx,1:3)    = -tanOri(sensorIdx,1:3);
-%     else
-%         decision(sensorIdx) = false;
-%     end
-%     close all
-% end
-% 
-% % Alternatively, specify the numbers to be flipped.
-% flipSensors = input('Form [1 56]: ');
-% 
-% for sensorIdx = 1:length(flipSensors)
-%     tanOri(flipSensors(sensorIdx),1:3)    = -tanOri(flipSensors(sensorIdx),1:3);
-% end
-% 
-% 
-% 
-% %% Show
-% figure;
-% hold on;
-% grid on;
-% quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), normZrad(:,1), normZrad(:,2), normZrad(:,3));
-% quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), normZtan(:,1), normZtan(:,2), normZtan(:,3));
-% 
-% scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
-% text(centrePoint(:,1)-1.5*normZrad(:,1),centrePoint(:,2)-1.5*normZrad(:,2),centrePoint(:,3)-1.5*normZrad(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
-% daspect([1 1 1])
-% 
-% % plot the STLs as well
-% for sensorIdx = 1:size(sensorListing, 1)
-%     patch('Faces',Mesh.Faces{sensorIdx},'Vertices',Mesh.Points{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0)
-% end
-% 
-% patch('Faces',F3,'Vertices',V3,'FaceAlpha',.1,'EdgeAlpha',0)
-% 
-% hold off
-% 
-% % Make the grad structure.
-% for sensorIdx = 1:size(sensorListing, 1)
-%     label{sensorIdx}    = strcat(num2str(sensorIdx),'_rad');
-%     label{sensorIdx+size(sensorListing, 1)}     = strcat(num2str(sensorIdx),'_tan');
-% end
-% 
-% grad            = [];
-% grad.chanpos    = [centrePoint; centrePoint];
-% grad.chanori    = [normZrad; normZtan];
-% 
-% 
-% grad.label      = label';
-% 
-% 
-% %% Next step is to combine this with a file to get the actual position of the cell. 
-% % Provide some info on which way the sensor is put into the slot. 
-% 
+% For determining whether to flip the orientation or not plot one sensor
+% onto the scalp at a time.
+if correct
+    repeat = 1;
+    while repeat
+        for sensorIdx = 1:size(sensorListing, 1)
+            hold on
+            if ~isempty(scalp)
+                patch('Faces',scalp.Faces,'Vertices',scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+            end
+            patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0)
+            quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
+            scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
+            
+            flip        = input('Press 1 to flip or 0 to skip');
+            if flip == 1
+                tanOri(sensorIdx,1:3)   = -tanOri(sensorIdx,1:3);
+            end
+            if sensorIdx ~= size(sensorListing, 1)
+                close all
+            end
+        end
+        repeat    = input('Would you like to go through them again? 1 for yes, 0 for no');
+        close all
+    end
+end
+
+% Put the main info into one output.
+filename    = [filename_rad;filename_tan];
+    slot        = [1:size(sensorListing, 1);1:size(sensorListing, 1);];
+    Px          = [centrePoint(:,1);centrePoint(:,1)];
+    Py          = [centrePoint(:,2);centrePoint(:,2)];
+    Pz          = [centrePoint(:,3);centrePoint(:,3)];
+    Ox          = [radOri(:,1);tanOri(:,1)];
+    Oy          = [radOri(:,2);tanOri(:,2)];
+    Oz          = [radOri(:,3);tanOri(:,3)];
+    outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
+if ~isempty(outputFilename)
+    
+    writetable(outputTable,strcat(outputFilename,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
+end
+
+sensorInfo      = outputTable;
