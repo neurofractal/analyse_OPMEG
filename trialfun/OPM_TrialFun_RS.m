@@ -6,7 +6,7 @@ cfg2.data        = cfg.dataset;
 rawData          = ft_opm_create(cfg2);
 
 hdr = rawData.hdr;
-pos_of_trig = contains(hdr.chantype,cfg.trialdef.trigchan);
+pos_of_trig = contains(hdr.label,cfg.trialdef.trigchan);
 
 % % Read header
 % hdr              = ft_read_header(strcat(cfg.dataset(1:end-3),'mat'));
@@ -31,7 +31,7 @@ eventCont           = rawData.trial{1}(pos_of_trig,:);
 time                = rawData.time{1};
 sample              = 1:length(time);
 % convert to binary
-eventDisc           = (eventCont > 1800000);
+eventDisc           = (eventCont > 20000);
 
 % find first sample. first find differences
 tmp                 = eventDisc - [0,eventDisc(1:end-1)];
@@ -39,8 +39,15 @@ tmp2                = (tmp == 1);
 events              = sample(tmp2)';
 events              = round(events);
 
-if isfield(cfg,'trialdef.downsample')
-    events = round((events./(rawData.fsample/cfg.trialdef.downsample)));
+if ~isempty(cfg.correct_time)
+    disp(['Correcting timing by ' num2str(cfg.correct_time) 's']);
+    time_to_correct = rawData.fsample*cfg.correct_time;    
+    events = events+time_to_correct;
+end
+
+
+if isfield(cfg.trialdef,'downsample')
+    events = round((events/(rawData.fsample/cfg.trialdef.downsample)));
 end  
 
 % create trl structure based upon the events
@@ -48,7 +55,6 @@ trl = [];
 
 for j = 1:length(events)
     if isfield(cfg.trialdef,'downsample')
-        fac = (rawData.fsample/cfg.trialdef.downsample);
         trlbegin = (events(j) - (cfg.trialdef.prestim*cfg.trialdef.downsample));
         trlend   = (events(j) + (cfg.trialdef.poststim*cfg.trialdef.downsample));
         offset        = (-cfg.trialdef.prestim*cfg.trialdef.downsample);

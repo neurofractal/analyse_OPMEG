@@ -205,24 +205,17 @@ rawData.hdr.fieldori        = channels.fieldori;
 if positions
     rawData.grad.chanpos    = posOri.chanpos;
     rawData.grad.chanori    = posOri.chanori;
-    indx = find(contains(channels.type,'megmag'));
-    rawData.grad.chanunit   = channels.units((indx));
-    rawData.grad.label      = channels.name;
+    rawData.grad.label      = posOri.label;
+    rawData.grad.coilpos    = posOri.chanpos;
+    rawData.grad.coilori    = posOri.chanori;
+    
+    % Find the position of the channels in overall channel list
+    find_chan = contains(channels.name,posOri.label);
+    rawData.grad.chanunit   = channels.units(find_chan);
+    rawData.grad.tra = diag(ones(1,length(rawData.grad.label)));
+
 end
 
-% % Forward model Check
-% subjectSource  = (positions|isfield(cfg,'space')) & isfield(cfg,'sMRI');
-% subjectSensor = ~subjectSource;
-% 
-% if subjectSource
-%     forward     = 1;
-%     template    = 0;
-% elseif subjectSensor
-%     forward 	= 0;
-%     template    = 0;
-% else
-%     forward     = 1;
-%     template    = 1;
 end
 
 

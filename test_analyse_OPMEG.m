@@ -87,10 +87,6 @@ cfg.zscore              = 'no';
 cfg.updatesens          = 'yes';
 rawData_denoised        = ft_denoise_pca(cfg,rawData_meg);
 
-cfg = [];
-cfg.resamplefs = 1000;
-[rawData_rad] = ft_resampledata(cfg, rawData_rad);
-
 % Band-pass filter between 0.5-250Hz to help visualisation
 cfg = [];
 cfg.demean      = 'yes';
@@ -112,8 +108,8 @@ ft_databrowser([],rawData_rad_no_ref);
 %%
 cfg = [];
 cfg.dataset                 = 'sub-001_ses-001_task-beep_run-001_meg.bin';
-cfg.trialdef.trigchan       = 'trigger';
-cfg.trialdef.downsample     = 1000;
+cfg.trialdef.trigchan       = 'Flux';
+%cfg.trialdef.downsample     = 1000;
 %cfg.continuous              = 'yes';
 cfg.trialdef.prestim        = 0.1;        % pre-stimulus interval
 cfg.trialdef.poststim       = 0.4;        % post-stimulus interval
@@ -124,6 +120,11 @@ banana                    = ft_definetrial(cfg);
 % Redefines the filtered data
 cfg                         = [];
 data                        = ft_redefinetrial(banana,rawData_rad_no_ref);
+
+cfg = [];
+cfg.resamplefs = 300;
+[data] = ft_resampledata(cfg, data);
+
 
 ft_databrowser([],data);
 avg = ft_timelockanalysis([],data);
