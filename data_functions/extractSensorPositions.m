@@ -1,11 +1,30 @@
-function sensorInfo = extractSensorPositions(folder,slotOri,plot,correct,scalp,outputFilename)
+function sensorInfo = extractSensorPositions(folder,slotOri,plot,correct,scalp,outputfile)
 % Extracts the orientations (rad and tan, sensor space)and the position of
 % sensors described by STL files.
-%
-% Input a folder containing only STL files for individual sensors. They
-% should all be in the same coordinate system. Describe the slot
-% orientation as 'rad' or 'tan', indicating which orientation at the sensor
-% level is pointing towards the scalp. 
+% 
+% This code is quite specific to the STL files for the Gen 2 OPMs, but
+% could be adapted for others.
+% 
+% Inputs. All are required at this stage, but can input empty. 
+% cfg.folder        = 'string', folder containing only the STL for sensors.
+% cfg.slotori       = 'rad' or 'tan', the sensor-space radial to the head.
+% cfg.plot          = bool, do you want a plot of the initial result?
+% cfg.correct       = bool, do you want to manually flip the tan ori?
+% cfg.scalp         = Matlab mesh struct, contains Faces and Points.
+% cfg.outputfile    = 'string', filename with directory for output.
+% 
+% Output is a table of sensor info. 'rad' and 'tan' are given their own
+% channels, rather than combining as Ox_rad, or similar. This should make
+% it more compatible with non-dual-axis pipelines. The output is given by
+% the function, but also saved to the specied file. Columns as follows:
+% 
+% 1) filename, STL filename in the order given by dir(). Check it is right.
+% 2) slot, the slot number asigned based on the dir() order. 
+% 3:5) Px; Py; Pz, position info. Will use whatever units were inputted. 
+% 6:8) Ox; Oy; Oz, orientation info. Normalised to the unit inputted. 
+% 
+% Editted from Stephanie Mellor's (09/02/2020) code by Nicholas Alexander 
+% (12/03/2020)
 
 % Input file path and find all STL files. 
 STLdir              = strcat(folder);
@@ -258,9 +277,9 @@ filename    = [filename_rad;filename_tan];
     Oy          = [radOri(:,2);tanOri(:,2)];
     Oz          = [radOri(:,3);tanOri(:,3)];
     outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
-if ~isempty(outputFilename)
+if ~isempty(outputfile)
     
-    writetable(outputTable,strcat(outputFilename,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
+    writetable(outputTable,strcat(outputfile,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
 end
 
 sensorInfo      = outputTable;
