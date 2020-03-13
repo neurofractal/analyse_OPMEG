@@ -132,4 +132,32 @@ ft_plot_vol(headmodel_singleshell);
 alpha 0.3; view([0,0]);
 
 
+%% Segment the brain
+cfg                 = [];
+cfg.output          = 'brain';
+mri_segmented       = ft_volumesegment(cfg, mri);
+
+%% Create singleshell headmodel
+cfg                     = [];
+cfg.tissue              = 'brain';
+cfg.method              = 'singleshell';
+headmodel               = ft_prepare_headmodel(cfg, mri_segmented);
+
+%%
+ft_determine_coordsys(mri, 'interactive', 'no');
+hold on; % add the subsequent objects to the figure
+drawnow; % workaround to prevent some MATLAB versions (2012b and 2014b) from crashing
+ft_plot_mesh(pos_spare,'vertexcolor','r','vertexsize',40); hold on;
+ft_plot_mesh(mesh,'facecolor',[238,206,179]./255,'EdgeColor','none',...
+    'facealpha',0.5); drawnow;
+ft_plot_mesh(pos_grid,'vertexcolor','b','vertexsize',40); hold on;
+for i = 1:length(pos_spare)
+    text(pos_spare(i,1),pos_spare(i,2),pos_spare(i,3),num2str(i),...
+        'FontSize',14)
+end
+ft_plot_vol(headmodel_singleshell);
+alpha 0.3; view([0,0]);
+
+
+
 

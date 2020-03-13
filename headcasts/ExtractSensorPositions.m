@@ -18,9 +18,9 @@ close all;
 sensorsRad = false;
 
 % Input file path
-sensorSTLs = 'C:\Users\rseymour\Dropbox\Research\Projects\2020\headcasts\Share\Hingecast\SensorSTLs\';
+sensorSTLs = 'D:\data\gareth_scanner_cast\indiv_stl';
 % Output file path
-savePath = 'D:\Github\analyse_OPMEG\headcasts\';
+savePath = 'D:\data\gareth_scanner_cast\';
 
 % Check if sensor stls have points at sensor end
 sensorPoints = false;
