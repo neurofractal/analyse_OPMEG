@@ -50,8 +50,8 @@ radOri              = zeros(size(sensorListing, 1), 3);
 tanOri              = zeros(size(sensorListing, 1), 3);
 sensorFaces         = cell(size(sensorListing, 1), 3);
 sensorVerts         = cell(size(sensorListing, 1), 3);
-filename_rad        = cell(size(sensorListing, 1), 3);
-filename_tan        = cell(size(sensorListing, 1), 3);
+filename_rad        = cell(size(sensorListing, 1), 1);
+filename_tan        = cell(size(sensorListing, 1), 1);
 
 for sensorIdx = 1:size(sensorListing, 1)
     % Specifiy and read in sensor STLs one at a time. 
@@ -274,7 +274,7 @@ end
 
 % Put the main info into one output.
 filename    = [filename_rad;filename_tan];
-slot        = [1:size(sensorListing, 1);1:size(sensorListing, 1);];
+slot        = [(1:length(sensorListing))';(1:length(sensorListing))'];
 Px          = [centrePoint(:,1);centrePoint(:,1)];
 Py          = [centrePoint(:,2);centrePoint(:,2)];
 Pz          = [centrePoint(:,3);centrePoint(:,3)];
