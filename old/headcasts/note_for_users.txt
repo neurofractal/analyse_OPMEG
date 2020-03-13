@@ -1,0 +1,1 @@
+These are old scripts used initially for development. For a stable version see https://github.com/FIL-OPMEG/scannercast
