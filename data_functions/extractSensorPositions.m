@@ -10,7 +10,7 @@ function sensorInfo = extractSensorPositions(cfg)
 % cfg.slotori       = 'rad' or 'tan', the sensor-space radial to the head.
 % cfg.plot          = bool, do you want a plot of the initial result?
 % cfg.correct       = bool, do you want to manually flip the tan ori?
-% cfg.scalp         = Matlab mesh struct, contains Faces and Points.
+% cfg.scalp         = STL file of scalp in the same coordinate system.
 % cfg.outputfile    = 'string', filename with directory for output.
 % 
 % Output is a table of sensor info. 'rad' and 'tan' are given their own
@@ -231,7 +231,8 @@ if cfg.plot
     end
     
     if ~isempty(cfg.scalp)
-        patch('Faces',cfg.scalp.Faces,'Vertices',cfg.scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+        [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
+        patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',.1,'EdgeAlpha',0);
     end
     hold off
     
@@ -245,14 +246,18 @@ end
 if cfg.correct
     repeat = 1;
     while repeat
+        if ~isempty(cfg.scalp)
+                [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
+        end
         for sensorIdx = 1:size(sensorListing, 1)
             hold on
             if ~isempty(cfg.scalp)
-                patch('Faces',cfg.scalp.Faces,'Vertices',cfg.scalp.Verts,'FaceAlpha',.1,'EdgeAlpha',0);
+                patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
             end
-            patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.1,'EdgeAlpha',0)
-            quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
-            scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
+            patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[0 0 0])
+            quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2), centrePoint(sensorIdx,3), tanOri(sensorIdx,1).*50, tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',[0 0 1]);
+            scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2), centrePoint(sensorIdx,3))
+            view(-radOri(sensorIdx,:));
             
             flip        = input('Press 1 to flip or 0 to skip');
             if flip == 1
@@ -269,14 +274,14 @@ end
 
 % Put the main info into one output.
 filename    = [filename_rad;filename_tan];
-    slot        = [1:size(sensorListing, 1);1:size(sensorListing, 1);];
-    Px          = [centrePoint(:,1);centrePoint(:,1)];
-    Py          = [centrePoint(:,2);centrePoint(:,2)];
-    Pz          = [centrePoint(:,3);centrePoint(:,3)];
-    Ox          = [radOri(:,1);tanOri(:,1)];
-    Oy          = [radOri(:,2);tanOri(:,2)];
-    Oz          = [radOri(:,3);tanOri(:,3)];
-    outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
+slot        = [1:size(sensorListing, 1);1:size(sensorListing, 1);];
+Px          = [centrePoint(:,1);centrePoint(:,1)];
+Py          = [centrePoint(:,2);centrePoint(:,2)];
+Pz          = [centrePoint(:,3);centrePoint(:,3)];
+Ox          = [radOri(:,1);tanOri(:,1)];
+Oy          = [radOri(:,2);tanOri(:,2)];
+Oz          = [radOri(:,3);tanOri(:,3)];
+outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
 if ~isempty(cfg.outputfile)
     
     writetable(outputTable,strcat(cfg.outputfile,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
