@@ -270,19 +270,40 @@ if strcmp(cfg.correct,'yes')
         if ~isempty(cfg.scalp)
                 [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
         end
+        
+        S.f = figure; 
+        create a pushbtton ( adapt it to your needs)
+        S.pb = uicontrol('style','push',...
+                 'units','pix',...
+                 'position',[10 10 180 40],...
+                 'fontsize',14,...
+                 'string','Flip?',...
+                 'callback',{@pb_call,S});
+        
         for sensorIdx = 1:size(sensorListing, 1)
-            hold on
             if ~isempty(cfg.scalp)
-                patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
+                S.h = patch('Faces',scalpFaces,'Vertices',scalpVerts,...
+                    'FaceAlpha',0.8,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
             end
-            patch('Faces',sensorFaces{sensorIdx},'Vertices',...
+            
+            hold on;
+
+            S.h = patch('Faces',sensorFaces{sensorIdx},'Vertices',...
                 sensorVerts{sensorIdx},'FaceAlpha',1,'EdgeAlpha',...
-                0,'FaceColor',[0 0 0])
-            quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                0,'FaceColor',[0 0 0]);
+            
+            hold on;
+            
+            S.h = quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
                 centrePoint(sensorIdx,3), tanOri(sensorIdx,1).*50,...
-                tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',[0 0 1]);
-            scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
-                centrePoint(sensorIdx,3))
+                tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',...
+                [0 0 1],'LineWidth',3); 
+            
+            hold on;
+            
+            S.h = scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                centrePoint(sensorIdx,3));
+            
             view(-radOri(sensorIdx,:));
             
             flip        = input('Press 1 to flip or 0 to skip');
@@ -290,7 +311,7 @@ if strcmp(cfg.correct,'yes')
                 tanOri(sensorIdx,1:3)   = -tanOri(sensorIdx,1:3);
             end
             if sensorIdx ~= size(sensorListing, 1)
-                close all
+               clf(S.f);
             end
         end
         repeat    = input('Would you like to go through them again? 1 for yes, 0 for no');
