@@ -8,9 +8,9 @@ function sensorInfo = extractSensorPositions(cfg)
 % Inputs. All are required at this stage, but can input empty. 
 % cfg.folder        = 'string', folder containing only the STL for sensors.
 % cfg.slotori       = 'rad' or 'tan', the sensor-space radial to the head.
-% cfg.plot          = bool, do you want a plot of the initial result?
-% cfg.correct       = bool, do you want to manually flip the tan ori?
-% cfg.scalp         = STL file of scalp in the same coordinate system.
+% cfg.plot          = 'yes' or 'no'
+% cfg.correct       = 'yes' or 'no' : do you want to manually flip the tan ori?
+% cfg.scalp         = path to STL file of scalp in the same coordinate system.
 % cfg.outputfile    = 'string', filename with directory for output.
 % 
 % Output is a table of sensor info. 'rad' and 'tan' are given their own
@@ -23,9 +23,23 @@ function sensorInfo = extractSensorPositions(cfg)
 % 3:5) Px; Py; Pz, position info. Will use whatever units were inputted. 
 % 6:8) Ox; Oy; Oz, orientation info. Normalised to the unit inputted. 
 % 
-% Editted from Stephanie Mellor's (09/02/2020) code by Nicholas Alexander 
-% (12/03/2020)
+%__________________________________________________________________________
+% Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
+% Edited from Stephanie Mellor's (09/02/2020) code by Nicholas Alexander 
+% (12/03/2020) and Robert Seymour (16/03/2020)
+%__________________________________________________________________________
 
+%% Example Usage
+% cfg               = [];
+% cfg.folder        = 'D:\data\gareth_scanner_cast\indiv_stl'
+% cfg.slotori       = 'tan';
+% cfg.plot          = 'yes';
+% cfg.correct       = 'no';
+% cfg.outputfile    = 'D:\data\gareth_scanner_cast\positions'
+% cfg.scalp         = 'D:\data\gareth_scanner_cast\Gareth Head.stl'
+% sensorInfo        = extractSensorPositions(cfg)
+
+%% Start of function
 % Input file path and find all STL files. 
 STLdir              = strcat(cfg.folder);
 sensorListing       = dir([STLdir '\*.stl']);
@@ -54,6 +68,10 @@ filename_rad        = cell(size(sensorListing, 1), 1);
 filename_tan        = cell(size(sensorListing, 1), 1);
 
 for sensorIdx = 1:size(sensorListing, 1)
+    
+    fprintf('Extracting information from .stl file %3d  of %3d\n',...
+        sensorIdx,size(sensorListing, 1));
+    
     % Specifiy and read in sensor STLs one at a time. 
     sensorFilename  = fullfile(sensorListing(sensorIdx).folder,sensorListing(sensorIdx).name);
     [faces, verts]              = stlread(sensorFilename);
@@ -217,14 +235,17 @@ for sensorIdx = 1:size(sensorListing, 1)
 end
 
 % Plot the result
-if cfg.plot
+if strcmp(cfg.plot,'yes')
     figure(1);
     hold on;
     grid on;
-    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), radOri(:,1), radOri(:,2), radOri(:,3));
-    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3), tanOri(:,1), tanOri(:,2), tanOri(:,3));
+    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
+        radOri(:,1), radOri(:,2), radOri(:,3));
+    quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
+        tanOri(:,1), tanOri(:,2), tanOri(:,3));
     scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
-    text(centrePoint(:,1)-1.5*radOri(:,1),centrePoint(:,2)-1.5*radOri(:,2),centrePoint(:,3)-1.5*radOri(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
+    text(centrePoint(:,1)-1.5*radOri(:,1),centrePoint(:,2)-1.5*radOri(:,2),...
+        centrePoint(:,3)-1.5*radOri(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
     daspect([1 1 1])
     for sensorIdx = 1:size(sensorListing, 1)
         patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.3,'EdgeAlpha',0);
@@ -243,7 +264,7 @@ end
 
 % For determining whether to flip the orientation or not plot one sensor
 % onto the scalp at a time.
-if cfg.correct
+if strcmp(cfg.correct,'yes')
     repeat = 1;
     while repeat
         if ~isempty(cfg.scalp)
@@ -254,9 +275,14 @@ if cfg.correct
             if ~isempty(cfg.scalp)
                 patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
             end
-            patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[0 0 0])
-            quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2), centrePoint(sensorIdx,3), tanOri(sensorIdx,1).*50, tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',[0 0 1]);
-            scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2), centrePoint(sensorIdx,3))
+            patch('Faces',sensorFaces{sensorIdx},'Vertices',...
+                sensorVerts{sensorIdx},'FaceAlpha',1,'EdgeAlpha',...
+                0,'FaceColor',[0 0 0])
+            quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                centrePoint(sensorIdx,3), tanOri(sensorIdx,1).*50,...
+                tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',[0 0 1]);
+            scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                centrePoint(sensorIdx,3))
             view(-radOri(sensorIdx,:));
             
             flip        = input('Press 1 to flip or 0 to skip');
@@ -283,8 +309,13 @@ Oy          = [radOri(:,2);tanOri(:,2)];
 Oz          = [radOri(:,3);tanOri(:,3)];
 outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
 if ~isempty(cfg.outputfile)
-    
-    writetable(outputTable,strcat(cfg.outputfile,'.tsv'),'Delimiter','tab','QuoteStrings',false,'FileType', 'text');
+    try
+    disp('Writing .tsv file...');
+    writetable(outputTable,strcat(cfg.outputfile,'.tsv'),'Delimiter',...
+        'tab','QuoteStrings',false,'FileType', 'text');
+    catch
+       warning(['Was not able to write the .tsv file... ',...
+           'Check for file with the same name...']);
 end
 
 sensorInfo      = outputTable;
