@@ -315,7 +315,8 @@ if ~isempty(cfg.outputfile)
         'tab','QuoteStrings',false,'FileType', 'text');
     catch
        warning(['Was not able to write the .tsv file... ',...
-           'Check for file with the same name...']);
+           'Did you create .tsv file with the same name before?']);
+    end
 end
 
 sensorInfo      = outputTable;
