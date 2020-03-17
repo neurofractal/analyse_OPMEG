@@ -44,7 +44,7 @@ channel     = cfg.channel;
 refchannel  = cfg.refchannel;
 
 %% Select MEG data and reference data
-disp('Selecting data channels');
+% MEG data
 if strcmp(channel,'all')
     
     ft_warning('Selecting MEG channels');
@@ -55,14 +55,17 @@ if strcmp(channel,'all')
     
 else
     cfg2 = [];
-    cfg2.channel = ft_channelselection_opm(channel,data)
+    cfg2.channel = ft_channelselection_opm(channel,data);
     meg_data = ft_selectdata(cfg2,data);
 end
 
-disp('Selecting reference channels');
+fprintf('Selected %2d data channels\n',length(meg_data.label));
+
+% Reference data
 cfg2 = [];
-cfg2.channel = ft_channelselection_opm(refchannel,data)
+cfg2.channel = ft_channelselection_opm(refchannel,data);
 ref_data = ft_selectdata(cfg2,data);
+fprintf('Selected %2d reference channels\n',length(ref_data.label));
 
 %% 
 
