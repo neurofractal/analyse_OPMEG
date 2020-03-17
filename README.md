@@ -7,4 +7,6 @@ Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 
 Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
           Nicholas Alexander  (n.alexander@ucl.ac.uk)
-
+          
+### Example Analysis Tutorials:
+- [Finger Abduction (Beta Desync)](./test_scripts/test_motor_data.ipynb)
