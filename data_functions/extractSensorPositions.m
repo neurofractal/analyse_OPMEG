@@ -41,8 +41,17 @@ function sensorInfo = extractSensorPositions(cfg)
 
 %% Start of function
 % Input file path and find all STL files. 
+
+close all force
+
 STLdir              = strcat(cfg.folder);
+
 sensorListing       = dir([STLdir '\*.stl']);
+
+if isempty(sensorListing)
+    sensorListing       = dir([STLdir '/*.stl']);
+end
+
 
 % We need to know the centre point of all sensors as a rough indication of
 % the orientation towards the scalp. Read in all files and take the mean.
@@ -238,7 +247,8 @@ end
 if strcmp(cfg.plot,'yes')
     figure(1);
     hold on;
-    grid on;
+    grid off;
+    set(gca,'visible','off')
     quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
         radOri(:,1), radOri(:,2), radOri(:,3));
     quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
@@ -258,40 +268,89 @@ if strcmp(cfg.plot,'yes')
     hold off
     
     % Ask if they are done with it.
-    input('Press any key to continue (closes figure)')
+    input('Press any key to continue (closes figure)\n')
     close all % Change this later. 
 end
 
-% For determining whether to flip the orientation or not plot one sensor
+% For determining whether to flip the orientation or not, plot one sensor
 % onto the scalp at a time.
 if strcmp(cfg.correct,'yes')
+    disp('Plotting sensor pos and ori one at a time. Please manually correct...');
     repeat = 1;
     while repeat
+        % If user specified a scalp,load this now
         if ~isempty(cfg.scalp)
-                [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
+                [scalpFaces, scalpVerts]  = stlread(cfg.scalp);
         end
+        
+        % Create Figure
+        S.f = figure; 
+        
+        % For every sensor
         for sensorIdx = 1:size(sensorListing, 1)
-            hold on
+            % Plot Scalp mesh if specified
             if ~isempty(cfg.scalp)
-                patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',1,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
+                S.h = patch('Faces',scalpFaces,'Vertices',scalpVerts,...
+                    'FaceAlpha',0.8,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
             end
-            patch('Faces',sensorFaces{sensorIdx},'Vertices',...
+            
+            hold on;
+            
+            %create two pushbttons
+            S.pb = uicontrol('style','push',...
+                'units','pix',...
+                'position',[370 10 180 40],...
+                'fontsize',14,...
+                'Tag','flip_button',...
+                'string','Flip = YES',...
+                'UserData',struct('flip',0),...
+                'callback',@pb_call);
+            
+            S.pb = uicontrol('style','push',...
+                'units','pix',...
+                'position',[10 10 180 40],...
+                'fontsize',14,...
+                'UserData',struct('flip',0),...
+                'string','Flip = NO',...
+                'callback',@pb_call2);
+            
+            S.h = patch('Faces',sensorFaces{sensorIdx},'Vertices',...
                 sensorVerts{sensorIdx},'FaceAlpha',1,'EdgeAlpha',...
-                0,'FaceColor',[0 0 0])
-            quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                0,'FaceColor',[0 0 0]);
+            
+            hold on;
+            
+            S.h = quiver3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
                 centrePoint(sensorIdx,3), tanOri(sensorIdx,1).*50,...
-                tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',[0 0 1]);
-            scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
-                centrePoint(sensorIdx,3))
+                tanOri(sensorIdx,2).*50, tanOri(sensorIdx,3).*50,'color',...
+                [0 0 1],'LineWidth',3); 
+            
+            hold on;
+            
+            S.h = scatter3(centrePoint(sensorIdx,1), centrePoint(sensorIdx,2),...
+                centrePoint(sensorIdx,3));
+           
+            % Remove axes
+            set(gca,'visible','off')
+            
+            % Set view
             view(-radOri(sensorIdx,:));
             
-            flip        = input('Press 1 to flip or 0 to skip');
-            if flip == 1
+            % Wait for user input
+            uiwait(S.f)
+            h = findobj('Tag','flip_button');
+            
+            % If user pressed 'FLIP' then flip the tan orientation
+            if h.UserData.flip == 1
                 tanOri(sensorIdx,1:3)   = -tanOri(sensorIdx,1:3);
+                disp([num2str(sensorIdx) ' FLIPPED']);
+            else
+                disp([num2str(sensorIdx) ' NOT FLIPPED']);
             end
-            if sensorIdx ~= size(sensorListing, 1)
-                close all
-            end
+            
+            % Clear the Figure for the next sensor
+            clf(S.f);
+
         end
         repeat    = input('Would you like to go through them again? 1 for yes, 0 for no');
         close all
@@ -320,3 +379,19 @@ if ~isempty(cfg.outputfile)
 end
 
 sensorInfo      = outputTable;
+
+%% Subfunctions for buttons
+function pb_call2(varargin)
+%     disp('NOT Flipped');
+    uiresume;
+    return
+end
+
+function pb_call(hObject,~)
+    hObject.UserData = struct('flip',1);
+%     disp('Flipped');
+    uiresume;
+    return
+end
+end
+
