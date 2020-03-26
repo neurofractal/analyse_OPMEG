@@ -74,8 +74,7 @@ radOri              = zeros(size(sensorListing, 1), 3);
 tanOri              = zeros(size(sensorListing, 1), 3);
 sensorFaces         = cell(size(sensorListing, 1), 3);
 sensorVerts         = cell(size(sensorListing, 1), 3);
-filename_rad        = cell(size(sensorListing, 1), 1);
-filename_tan        = cell(size(sensorListing, 1), 1);
+filename        = cell(size(sensorListing, 1), 1);
 
 for sensorIdx = 1:size(sensorListing, 1)
     
@@ -87,8 +86,7 @@ for sensorIdx = 1:size(sensorListing, 1)
         sensorListing(sensorIdx).name);
     [faces, verts]              = stlread(sensorFilename);
     
-    filename_rad{sensorIdx}     = strcat(sensorFilename,'_rad');
-    filename_tan{sensorIdx}     = strcat(sensorFilename,'_tan');
+    filename{sensorIdx}         = sensorFilename;
     
     % Reduce the vertices by removing duplicate positions. This will help
     % later on. For example, it avoids there being duplicate corners which
@@ -384,7 +382,7 @@ if strcmp(cfg.correct,'yes')
 end
 
 % Put the main info into one output.
-filename    = [filename_rad;filename_tan];
+filename    = [filename;filename];
 slot        = [(1:length(sensorListing))';(1:length(sensorListing))'];
 Px          = [centrePoint(:,1);centrePoint(:,1)];
 Py          = [centrePoint(:,2);centrePoint(:,2)];
@@ -393,13 +391,13 @@ Pz          = [centrePoint(:,3);centrePoint(:,3)];
 % Create list describing whether orientation corresponds to 
 % TAN or RAD OPM sensors. Where sensors are placed tan (e.g. for hingecast)
 % the sensitive axis will need to be flipped
-corresponding_sens = cell(length(filename_rad)*2,1);
+corresponding_sens = cell(length(filename)*2,1);
 if strcmp(cfg.slotori,'tan')
-    corresponding_sens(1:length(filename_rad))      = {'TAN'};
-    corresponding_sens(length(filename_rad)+1:end)  = {'RAD'};
+    corresponding_sens(1:length(filename))      = {'RAD'};
+    corresponding_sens(length(filename)+1:end)  = {'TAN'};
 elseif strcmp(cfg.slotori,'rad')
-    corresponding_sens(1:length(filename_rad))      = {'RAD'};
-    corresponding_sens(length(filename_rad)+1:end)  = {'TAN'};
+    corresponding_sens(1:length(filename))      = {'TAN'};
+    corresponding_sens(length(filename)+1:end)  = {'RAD'};
 else
     corresponding_sens(1:end)                       = {'UNKNOWN'};
 end
