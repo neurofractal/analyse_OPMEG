@@ -11,7 +11,7 @@ function sensorInfo = extractSensorPositions(cfg)
 % cfg.plot          = 'yes' or 'no'
 % cfg.correct       = 'yes' or 'no' : do you want to manually flip the tan ori?
 % cfg.scalp         = path to STL file of scalp in the same coordinate system.
-% cfg.outputfile    = 'string', filename with directory for output.
+% cfg.outputfolder  = 'string', filename with directory for output.
 % 
 % Output is a table of sensor info. 'rad' and 'tan' are given their own
 % channels, rather than combining as Ox_rad, or similar. This should make
@@ -35,8 +35,8 @@ function sensorInfo = extractSensorPositions(cfg)
 % cfg.slotori       = 'tan';
 % cfg.plot          = 'yes';
 % cfg.correct       = 'yes';
-% cfg.outputfile    = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/pos_GB_hingecast';
-% cfg.scalp         = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/Gareth Head.stl';
+% cfg.outputfolder  = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/hingecast';
+% cfg.scalp         = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/Head.stl';
 % sensorInfo        = extractSensorPositions(cfg)
 
 
@@ -354,6 +354,31 @@ if strcmp(cfg.correct,'yes')
             clf(S.f);
 
         end
+        
+        % Show a plot of the current orientations.
+        figure(2);
+        hold on;
+        grid off;
+        set(gca,'visible','off')
+        quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
+            radOri(:,1), radOri(:,2), radOri(:,3));
+        quiver3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3),...
+            tanOri(:,1), tanOri(:,2), tanOri(:,3));
+        scatter3(centrePoint(:,1), centrePoint(:,2), centrePoint(:,3))
+        text(centrePoint(:,1)-1.5*radOri(:,1),centrePoint(:,2)-1.5*radOri(:,2),...
+            centrePoint(:,3)-1.5*radOri(:,3), cellstr(num2str((1:size(centrePoint,1))')), 'color', 'g');
+        daspect([1 1 1])
+        for sensorIdx = 1:size(sensorListing, 1)
+            patch('Faces',sensorFaces{sensorIdx},'Vertices',sensorVerts{sensorIdx},'FaceAlpha',.3,'EdgeAlpha',0);
+        end
+
+        if ~isempty(cfg.scalp)
+            [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
+            patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',.1,'EdgeAlpha',0);
+        end
+        hold off
+
+        % Ask if they are done with it.
         repeat    = input('Would you like to go through them again? 1 for yes, 0 for no');
         close all
     end
@@ -387,10 +412,10 @@ Oz          = [radOri(:,3);tanOri(:,3)];
 
 outputTable = table(filename,slot,corresponding_sens,Px,Py,Pz,Ox,Oy,Oz);
 
-if ~isempty(cfg.outputfile)
+if ~isempty(cfg.outputfolder)
     try
     disp('Writing .tsv file...');
-    writetable(outputTable,strcat(cfg.outputfile,'.tsv'),'Delimiter',...
+    writetable(outputTable,strcat(cfg.outputfolder,'\positions.tsv'),'Delimiter',...
         'tab','QuoteStrings',false,'FileType', 'text');
     catch
        warning(['Was not able to write the .tsv file... ',...
