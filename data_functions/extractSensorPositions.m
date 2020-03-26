@@ -31,13 +31,14 @@ function sensorInfo = extractSensorPositions(cfg)
 
 %% Example Usage
 % cfg               = [];
-% cfg.folder        = 'D:\data\gareth_scanner_cast\indiv_stl'
+% cfg.folder        = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/indiv_stl';
 % cfg.slotori       = 'tan';
 % cfg.plot          = 'yes';
-% cfg.correct       = 'no';
-% cfg.outputfile    = 'D:\data\gareth_scanner_cast\positions'
-% cfg.scalp         = 'D:\data\gareth_scanner_cast\Gareth Head.stl'
+% cfg.correct       = 'yes';
+% cfg.outputfile    = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/pos_GB_hingecast';
+% cfg.scalp         = '/Volumes/Robert T5/OPM_data/gareth_scanner_cast/Gareth Head.stl';
 % sensorInfo        = extractSensorPositions(cfg)
+
 
 %% Start of function
 % Input file path and find all STL files. 
@@ -82,7 +83,8 @@ for sensorIdx = 1:size(sensorListing, 1)
         sensorIdx,size(sensorListing, 1));
     
     % Specifiy and read in sensor STLs one at a time. 
-    sensorFilename  = fullfile(sensorListing(sensorIdx).folder,sensorListing(sensorIdx).name);
+    sensorFilename              = fullfile(sensorListing(sensorIdx).folder,...
+        sensorListing(sensorIdx).name);
     [faces, verts]              = stlread(sensorFilename);
     
     filename_rad{sensorIdx}     = strcat(sensorFilename,'_rad');
@@ -363,10 +365,28 @@ slot        = [(1:length(sensorListing))';(1:length(sensorListing))'];
 Px          = [centrePoint(:,1);centrePoint(:,1)];
 Py          = [centrePoint(:,2);centrePoint(:,2)];
 Pz          = [centrePoint(:,3);centrePoint(:,3)];
+
+% Create list describing whether orientation corresponds to 
+% TAN or RAD OPM sensors. Where sensors are placed tan (e.g. for hingecast)
+% the sensitive axis will need to be flipped
+corresponding_sens = cell(length(filename_rad)*2,1);
+if strcmp(cfg.slotori,'tan')
+    corresponding_sens(1:length(filename_rad))      = {'TAN'};
+    corresponding_sens(length(filename_rad)+1:end)  = {'RAD'};
+elseif strcmp(cfg.slotori,'rad')
+    corresponding_sens(1:length(filename_rad))      = {'RAD'};
+    corresponding_sens(length(filename_rad)+1:end)  = {'TAN'};
+else
+    corresponding_sens(1:end)                       = {'UNKNOWN'};
+end
+
+
 Ox          = [radOri(:,1);tanOri(:,1)];
 Oy          = [radOri(:,2);tanOri(:,2)];
 Oz          = [radOri(:,3);tanOri(:,3)];
-outputTable = table(filename,slot,Px,Py,Pz,Ox,Oy,Oz);
+
+outputTable = table(filename,slot,corresponding_sens,Px,Py,Pz,Ox,Oy,Oz);
+
 if ~isempty(cfg.outputfile)
     try
     disp('Writing .tsv file...');
