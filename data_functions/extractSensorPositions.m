@@ -264,11 +264,12 @@ if strcmp(cfg.plot,'yes')
     end
     
     if ~isempty(cfg.scalp)
-        [scalpFaces, scalpVerts]              = stlread(cfg.scalp);
-        patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceAlpha',.1,'EdgeAlpha',0);
+        [scalpFaces, scalpVerts]    = stlread(cfg.scalp);
+        cindex                      = scalpVerts(:,3);
+        patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceVertexCData',cindex,'FaceColor','interp','EdgeAlpha',0);
+        colormap(copper)
     end
     hold off
-    
     % Ask if they are done with it.
     input('Press any key to continue (closes figure)\n')
     close all % Change this later. 
@@ -292,12 +293,10 @@ if strcmp(cfg.correct,'yes')
         for sensorIdx = 1:size(sensorListing, 1)
             % Plot Scalp mesh if specified
             if ~isempty(cfg.scalp)
-                S.h = patch('Faces',scalpFaces,'Vertices',scalpVerts,...
-                    'FaceAlpha',0.8,'EdgeAlpha',0,'FaceColor',[.85 .72 .6]);
+                S.h = patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceVertexCData',cindex,'FaceColor','interp','EdgeAlpha',0);
+                colormap(copper)
             end
-            
             hold on;
-            
             %create two pushbttons
             S.pb = uicontrol('style','push',...
                 'units','pix',...
