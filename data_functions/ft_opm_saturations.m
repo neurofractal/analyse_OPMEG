@@ -67,18 +67,20 @@ plot        = cfg.plot;
 sat = [];
 count = 1;
 
-% Use ft_progress to track the progress!
-disp('Searching the data channel by channel for signal saturation...');
-ft_progress('init', 'text', 'Please wait...')
-
 % If data is not already subdivided then
 if numel(data.trial) == 1
     % Split the data into 0.1s segments (unsure of optimal time?)
-    nsamps = cfg.plot*data.fsample;
+    nsamps = cfg.seglength*data.fsample;
     beg = 1:nsamps:size(data.trial{1},2);
     endsamp =  beg+(nsamps-1);
     inRange = ~(beg>size(data.trial{1},2)|endsamp>size(data.trial{1},2));
+else
+    ft_warning('You might need to adjust cfg.satval for epoched data');
 end
+
+% Use ft_progress to track the progress!
+disp('Searching the data channel by channel for signal saturation...');
+ft_progress('init', 'text', 'Please wait...')
 
 % For every channel
 for chan = 1:length(data.label)
@@ -127,7 +129,11 @@ for chan = 1:length(data.label)
         end
         % Make sure it's the right length (final sample sometimes cut off)
         time_sat = time_sat(1:length(data.time{1}));
-        % Get the saturated tikes
+        
+        % Make it logical
+        time_sat = logical(time_sat);
+        
+        % Get the saturated times
         time_sat2 = data.time{1}(time_sat);
         
     else
@@ -135,9 +141,6 @@ for chan = 1:length(data.label)
         time_sat(find_vals) = 0;
         time_sat2 = time_sat;
     end
-    
-    % Make it logical (like a vulcan)
-    time_sat = logical(time_sat);
     
     
     % Add this to the sat array
