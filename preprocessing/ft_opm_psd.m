@@ -1,4 +1,4 @@
-function [pow] = ft_opm_psd(cfg,rawData)
+function [pow, freq, label] = ft_opm_psd(cfg,rawData)
 % Function to calculate PSD on optically-pumped magnetencephalography
 % (OPMEG) data acquired from the UCL Wellcome Centre for Neuroimaging.
 %
@@ -57,6 +57,8 @@ else
         ft_warning(['Could not select ' chan]);
     end
 end
+
+label = rawData.label;
 
 %%
 method_for_fft = cfg.method;
@@ -172,7 +174,7 @@ switch method_for_fft
             % Adjust limits based on cfg.foi
             xlim([cfg.foi(1), cfg.foi(end)]);
             %ylim([1, 1000]);
-            lgd = legend(vertcat(rawData.label, 'mean'));
+            lgd = legend(vertcat(label, 'mean'));
         else
             disp('NOT PLOTTING');
         end
