@@ -53,6 +53,19 @@ if ~isfield(cfg, 'dB')
     cfg.dB = 'yes';
 end
 
+% Warn the user if the input isn't as expected
+if ~strcmp(cfg.method,'tim')
+    ft_warning('Currently only cfg.method = ''tim'' is supported');
+    pause(1.0);
+end
+
+if ~strcmp(cfg.dB,'yes')
+    ft_warning(['Consider using cfg.dB = ''yes''. Subtracting PSDs',...
+        ' from one another will result in odd-looking plots']);
+    pause(1.0);
+end
+
+
 % Calculate the PSDs
 cfg2 = cfg;
 cfg2.plot = 'no';
