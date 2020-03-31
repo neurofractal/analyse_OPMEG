@@ -113,6 +113,8 @@ if strcmp(cfg.plot,'yes')
     xlim([cfg.foi(1), cfg.foi(end)]);
     %ylim([1, 1000]);
     lgd = legend(vertcat(label1, 'mean'));
+
+
 else
     disp('NOT PLOTTING');
 end
