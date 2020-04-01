@@ -64,6 +64,72 @@ label = rawData.label;
 method_for_fft = cfg.method;
 
 switch method_for_fft
+    case 'matlab'
+        smo = 50;
+        steps = 10;
+        Fs = rawData.fsample;
+        N = floor(size(rawData.trial{1},2));
+        chan = size(rawData.trial{1},1);
+        
+        % Perhaps there is a better way to do this than per channel in a
+        % loop?
+        
+        po = [];
+        
+        ft_progress('init', 'text', 'Please wait...')
+        
+        for c = 1:chan
+            
+            % Display the progress of the function
+            ft_progress(c/chan,'Calculating PSD for channel: %s',label{c});
+            
+            xdft = fft(rawData.trial{1}(c,:));
+            xdft = xdft(1:floor(N/2)+1);
+            psdx = (1/(Fs*N)).*abs(xdft).^2;
+            psdx(2:end-1) = 2*psdx(2:end-1);
+            
+            smoothed = conv(psdx, ones(smo,1), 'valid');
+            smoothed = smoothed(1:steps:fix(length(psdx) - smo))/smo;
+            
+            freq = linspace(0,Fs/2,size(smoothed,2));
+            
+            po(c,:) = smoothed;
+        end
+        
+        strt = find(freq > cfg.foi(1),1,'first');
+        stp  = find(freq < cfg.foi(2),1,'last');
+        
+        pow = po;
+        
+        ft_progress('close');
+
+        % Funky colorscheme, looks OK...
+        colormap123     = linspecer(length(label));
+        
+        if strcmp(cfg.plot,'yes')
+            % Make a Figure
+            figure()
+            set(gcf,'Position',[100 100 1200 800]);
+            
+            h = plot(freq(strt:stp),log10(po(:,strt:stp)),...
+                'LineWidth',1);
+            set(h, {'color'},num2cell(colormap123,2));
+            hold on;
+            plot(freq(strt:stp),log10(mean(po(:,strt:stp),1)),'-k','LineWidth',2);
+            grid on
+            ax = gca; % current axes
+            ax.FontSize = 20;
+            ax.TickLength = [0.02 0.02];
+            ylabel('PSD (T^2/Hz)','FontSize',30);
+            xlabel('Frequency (Hz)','FontSize',30);
+            % Legend
+            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),'location','eastoutside');
+            hl = findobj(hobj,'type','line');
+            set(hl,'LineWidth',4);
+            ht = findobj(hobj,'type','text');
+            set(ht,'FontSize',12);
+        end
+
     case 'fieldtrip'
         ft_warning('NOT TESTED DO NOT USE');
         foi = [cfg.foi(1):0.05:cfg.foi(end)];
@@ -88,7 +154,7 @@ switch method_for_fft
         
         psd_hann = ft_freqanalysis(cfg2, rawData);
         pow = psd_hann.powspctrm;
-
+        
         figure;
         set(gcf,'Position',[100 100 1200 800]);
         semilogy(psd_hann.freq,psd_hann.powspctrm);
@@ -100,9 +166,17 @@ switch method_for_fft
         lgd = legend(vertcat(rawData.label, 'mean'));
         set(lgd,'Location','BestOutside');
         
+        strt = find(freq > 1,cfg.foi(1),'first');
+        stp  = find(freq < 100,cfg.foi(2),'last');
+        
         % Another method from Tim T
     case 'tim'
-        
+        try
+            colormap123     = linspecer(length(label));
+        catch
+            disp('Using default colorscheme')
+        end
+
         % Split data into epochs
         nsamps = (cfg.trial_length)*rawData.fsample;
         beg = 1:nsamps:size(rawData.trial{1},2);
@@ -146,14 +220,20 @@ switch method_for_fft
             pow(:,:,j) =psdx;
         end
         
+        po = median(pow(:,:,:),3);
+        
         % Plot
         if strcmp(cfg.plot,'yes')
             % Calculate median out of all epochs
-            po = median(pow(:,:,:),3);
             figure()
             set(gcf,'Position',[100 100 1200 800]);
             % Plot all channels
-            semilogy(freq,po,'LineWidth',1); hold on;
+            h = semilogy(freq,po,'LineWidth',1);
+            try
+                set(h, {'color'},num2cell(colormap123,2));
+            catch
+            end
+            hold on;
             % Plot the mean in black
             semilogy(freq,squeeze(mean(po,2)),'-k','LineWidth',2);
             hold on
@@ -161,27 +241,28 @@ switch method_for_fft
             yp2=ones(1,round(freq(end))+1)*15;
             p2 =plot(xp2,yp2,'--k');
             p2.LineWidth=2;
-            xlabel('Frequency (Hz)')
-            labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-            ylabel(labY,'interpreter','latex')
             grid on
             ax = gca; % current axes
-            ax.FontSize = 13;
+            ax.FontSize = 20;
             ax.TickLength = [0.02 0.02];
-            fig= gcf;
-            fig.Color=[1,1,1];
+            
+            xlabel('Frequency (Hz)','FontSize',20)
+            labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
+            ylabel(labY,'interpreter','latex','FontSize',20)
             
             % Adjust limits based on cfg.foi
             xlim([cfg.foi(1), cfg.foi(end)]);
-            %ylim([1, 1000]);
-            lgd = legend(vertcat(label, 'mean'));
+            % Legend
+            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
+                'location','eastoutside');
+            hl = findobj(hobj,'type','line');
+            set(hl,'LineWidth',4);
+            ht = findobj(hobj,'type','text');
+            set(ht,'FontSize',12);
         else
             disp('NOT PLOTTING');
         end
-
-        
 end
-
 
 end
 
