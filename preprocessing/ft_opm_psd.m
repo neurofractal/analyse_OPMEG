@@ -11,7 +11,8 @@ function [pow, freq, label] = ft_opm_psd(cfg,rawData)
 %   cfg.foi             = frequencies of interest in form [X Y].
 %                       Default = [1 100]
 %   cfg.trial_length    = length of segments (in seconds). Default = 1.
-%   cfg.channel        = 'all', 'MEG', 'RAD', 'TAN'. Default = 'all'.
+%                       Set to [] to make width of trial. 
+%   cfg.channel         = 'all', 'MEG', 'RAD', 'TAN'. Default = 'all'.
 %   cfg.plot            = 'yes' or 'no'
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
@@ -88,7 +89,7 @@ switch method_for_fft
         
         psd_hann = ft_freqanalysis(cfg2, rawData);
         pow = psd_hann.powspctrm;
-
+        
         figure;
         set(gcf,'Position',[100 100 1200 800]);
         semilogy(psd_hann.freq,psd_hann.powspctrm);
@@ -103,18 +104,37 @@ switch method_for_fft
         % Another method from Tim T
     case 'tim'
         
+        % if cfg.trial_length is an empty array we'll get it to guess the
+        % length of the trial
+        if isempty(cfg.trial_length)
+            cfg.trial_length = range(rawData.time{1});
+        end
+        
+        if cfg.trial_length > range(rawData.time{1})
+            error('You are specifying PSD windows longer than the trial length!')
+        end
+        
         % Split data into epochs
         nsamps = (cfg.trial_length)*rawData.fsample;
-        beg = 1:nsamps:size(rawData.trial{1},2);
-        endsamp =  beg+(nsamps-1);
-        inRange = ~(beg>size(rawData.trial{1},2)|endsamp>size(rawData.trial{1},2));
-        chans = 1:1:(size(rawData.trial{1},1));
-        eD = zeros(length(chans),nsamps,sum(inRange));
-        for i =1:length(inRange)
-            if(inRange(i))
-                eD(:,:,i)=rawData.trial{1}(chans,beg(i):endsamp(i),:);
+        ntrials = numel(rawData.trial);
+        
+        for ii = 1:ntrials
+            beg = 1:nsamps:size(rawData.trial{ii},2);
+            endsamp =  beg+(nsamps-1);
+            inRange = ~(beg>=size(rawData.trial{ii},2)|endsamp>=size(rawData.trial{ii},2));
+            chans = 1:1:(size(rawData.trial{ii},1));
+            if ii == 1
+                eD = zeros(length(chans),nsamps,sum(inRange),ntrials);
+            end
+            for jj = 1:length(inRange)
+                if(inRange(jj))
+                    eD(:,:,jj,ii)=rawData.trial{ii}(chans,beg(jj):endsamp(jj),:);
+                end
             end
         end
+        
+        % Reshape eD so its 3D
+        eD = reshape(eD,size(eD,1),size(eD,2),[]);
         
         % Get variables for calculating PSD
         fs = rawData.fsample;
@@ -178,7 +198,7 @@ switch method_for_fft
         else
             disp('NOT PLOTTING');
         end
-
+        
         
 end
 
