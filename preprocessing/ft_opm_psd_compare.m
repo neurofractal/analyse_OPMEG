@@ -56,7 +56,7 @@ end
 % Warn the user if the input isn't as expected
 if ~strcmp(cfg.method,'tim')
     ft_warning('Currently only cfg.method = ''tim'' is supported');
-    pause(1.0);
+    %pause(1.0);
 end
 
 if ~strcmp(cfg.dB,'yes')
@@ -69,8 +69,8 @@ end
 % Calculate the PSDs
 cfg2 = cfg;
 cfg2.plot = 'no';
-[pow1, freq, label1] = ft_opm_psd(cfg2,rawData1);
-[pow2, freq, label2] = ft_opm_psd(cfg2,rawData2);
+[pow1, ~, label1] = ft_opm_psd(cfg2,rawData1);
+[pow2, freq, ~] = ft_opm_psd(cfg2,rawData2);
 
 % Check the size of the arrays is the same
 if size(pow1,2) ~= size(pow2,2)
@@ -82,9 +82,10 @@ if size(pow1,1) ~= size(pow2,1)
 end
 
 % Calculate Shielding Factor
-
-pow1 = median(pow1(:,:,:),3);
-pow2 = median(pow2(:,:,:),3);
+if strcmp(cfg.method,'tim')
+    pow1 = median(pow1(:,:,:),3);
+    pow2 = median(pow2(:,:,:),3);
+end
 
 if strcmp(cfg.dB,'yes')
     shield = 20*log10(pow1./pow2);
@@ -94,39 +95,57 @@ end
 
 % Plot
 if strcmp(cfg.plot,'yes')
-    % Calculate median out of all epochs
+    try
+        colormap123     = linspecer(length(label1));
+    catch
+        disp('Using default colorscheme')
+    end
+    
     figure()
     set(gcf,'Position',[100 100 1200 800]);
     % Plot all channels
     if strcmp(cfg.dB,'yes')
-        plot(freq,shield,'LineWidth',1); hold on;
+        h = plot(freq,shield,'LineWidth',1); hold on;
+        % Try fancy colormap
+        try
+            set(h, {'color'},num2cell(colormap123,2));
+        catch
+        end
         % Plot the mean in black
-        plot(freq,squeeze(mean(shield,2)),'-k','LineWidth',2);
+        if strcmp(cfg.method,'matlab')
+            plot(freq,squeeze(mean(shield,1)),'-k','LineWidth',2);
+        else
+            plot(freq,squeeze(mean(shield,2)),'-k','LineWidth',2);
+        end
     else
         semilogy(freq,shield,'LineWidth',1); hold on;
         % Plot the mean in black
         semilogy(freq,squeeze(mean(shield,2)),'-k','LineWidth',2);
     end
-    hold on
-    xlabel('Frequency (Hz)')
+    hold on;
+    grid on;
+    ax = gca; % current axes
+    ax.FontSize = 20;
+    ax.TickLength = [0.02 0.02];
+    fig= gcf;
+    fig.Color=[1,1,1];
+    xlabel('Frequency (Hz)','FontSize',30)
     if strcmp(cfg.dB,'yes')
         labY = ['Shielding Factor (dB)'];
     else
         labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
     end
-    ylabel(labY,'interpreter','latex')
-    grid on
-    ax = gca; % current axes
-    ax.FontSize = 13;
-    ax.TickLength = [0.02 0.02];
-    fig= gcf;
-    fig.Color=[1,1,1];
+    ylabel(labY,'interpreter','latex','FontSize',30)
     
     % Adjust limits based on cfg.foi
     xlim([cfg.foi(1), cfg.foi(end)]);
     %ylim([1, 1000]);
-    lgd = legend(vertcat(label1, 'mean'));
-
+    % Legend
+    [~, hobj, ~, ~] = legend(vertcat(label1, 'mean'),'location','eastoutside');
+    hl = findobj(hobj,'type','line');
+    set(hl,'LineWidth',4);
+    ht = findobj(hobj,'type','text');
+    set(ht,'FontSize',12);
 
 else
     disp('NOT PLOTTING');
