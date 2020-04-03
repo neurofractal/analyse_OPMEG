@@ -95,12 +95,22 @@ end
 
 % Plot
 if strcmp(cfg.plot,'yes')
-    % Calculate median out of all epochs
+    try
+        colormap123     = linspecer(length(label1));
+    catch
+        disp('Using default colorscheme')
+    end
+    
     figure()
     set(gcf,'Position',[100 100 1200 800]);
     % Plot all channels
     if strcmp(cfg.dB,'yes')
-        plot(freq,shield,'LineWidth',1); hold on;
+        h = plot(freq,shield,'LineWidth',1); hold on;
+        % Try fancy colormap
+        try
+            set(h, {'color'},num2cell(colormap123,2));
+        catch
+        end
         % Plot the mean in black
         if strcmp(cfg.method,'matlab')
             plot(freq,squeeze(mean(shield,1)),'-k','LineWidth',2);
@@ -119,13 +129,13 @@ if strcmp(cfg.plot,'yes')
     ax.TickLength = [0.02 0.02];
     fig= gcf;
     fig.Color=[1,1,1];
-    xlabel('Frequency (Hz)','FontSize',20)
+    xlabel('Frequency (Hz)','FontSize',30)
     if strcmp(cfg.dB,'yes')
         labY = ['Shielding Factor (dB)'];
     else
         labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
     end
-    ylabel(labY,'interpreter','latex','FontSize',20)
+    ylabel(labY,'interpreter','latex','FontSize',30)
     
     % Adjust limits based on cfg.foi
     xlim([cfg.foi(1), cfg.foi(end)]);
