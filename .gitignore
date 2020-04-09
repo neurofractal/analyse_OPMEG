@@ -1,3 +1,7 @@
 
 *.asv
 *.m~
+test_scripts/.ipynb_checkpoints/load_OPMdata_MNE-checkpoint.ipynb
+test_scripts/.ipynb_checkpoints/load_UCL_OPM-checkpoint.ipynb
+test_scripts/.ipynb_checkpoints/Untitled-checkpoint.ipynb
+test_scripts/load_OPMdata_MNE.ipynb
