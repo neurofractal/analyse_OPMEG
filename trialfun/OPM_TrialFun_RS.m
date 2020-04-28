@@ -58,12 +58,12 @@ for j = 1:length(events)
         trlbegin = (events(j) - (cfg.trialdef.prestim*cfg.trialdef.downsample));
         trlend   = (events(j) + (cfg.trialdef.poststim*cfg.trialdef.downsample));
         offset        = (-cfg.trialdef.prestim*cfg.trialdef.downsample);
-        trl(end+1, :) = ([trlbegin trlend offset 1]);
+        trl(end+1, :) = ([trlbegin trlend offset j]);
     else
         trlbegin = events(j) - cfg.trialdef.prestim*hdr.Fs;
         trlend   = events(j) + cfg.trialdef.poststim*hdr.Fs;
         offset        = -cfg.trialdef.prestim*hdr.Fs;
-        trl(end+1, :) = ([trlbegin trlend offset 1]);
+        trl(end+1, :) = ([trlbegin trlend offset j]);
     end
 end
 end
