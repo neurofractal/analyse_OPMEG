@@ -11,3 +11,4 @@ Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
           
 ### Example Analysis Tutorials:
 - [Finger Abduction (Beta Desync)](./test_scripts/test_motor_data.ipynb)
+- [Data De-noising & M170 Faces Data](./test_scripts/denoise_faces.ipynb)

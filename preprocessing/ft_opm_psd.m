@@ -13,6 +13,7 @@ function [pow, freq, label] = ft_opm_psd(cfg,rawData)
 %                       Set to [] to make width of trial.
 %   cfg.channel         = 'all', 'MEG', 'RAD', 'TAN' (default = 'all').
 %   cfg.plot            = 'yes' or 'no' (default = 'yes')
+%   cfg.plot_legend     = 'yes' or 'no' (default = 'yes')
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 % Adapted from spm_opm_create (Tim Tierney)
@@ -41,6 +42,10 @@ end
 
 if ~isfield(cfg, 'plot')
     cfg.plot = 'yes';
+end
+
+if ~isfield(cfg, 'plot_legend')
+    cfg.plot_legend = 'yes';
 end
 
 %% Select the data based on cfg.channel option
@@ -250,6 +255,8 @@ switch method_for_fft
             po = median(pow(:,:,:),3);
             figure()
             set(gcf,'Position',[100 100 1200 800]);
+            fig= gcf;
+            fig.Color=[1,1,1];
             % Plot all channels
             h = semilogy(freq,po,'LineWidth',1);
             try
@@ -275,13 +282,30 @@ switch method_for_fft
             
             % Adjust limits based on cfg.foi
             xlim([cfg.foi(1), cfg.foi(end)]);
-            % Legend
-            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
-                'location','eastoutside');
-            hl = findobj(hobj,'type','line');
-            set(hl,'LineWidth',4);
-            ht = findobj(hobj,'type','text');
-            set(ht,'FontSize',12);
+            
+            % Plot legend
+            if strcmp(cfg.plot_legend,'yes')
+                if length(label) > 24
+                    [rrr,object_h] = ...
+                        columnlegend(2, vertcat(label, 'mean'),...
+                        'Location','northeastoutside','FontSize',14);
+                    
+                    % Fix Me: change FontSize?
+                    
+                    hl = findobj(object_h,'type','line');
+                    h2 = findobj(object_h,'type','text');
+                    set(hl,'LineWidth',5);
+                    
+                else
+                    % Legend
+                    [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
+                        'location','eastoutside');
+                    hl = findobj(hobj,'type','line');
+                    set(hl,'LineWidth',4);
+                    ht = findobj(hobj,'type','text');
+                    set(ht,'FontSize',12);
+                end
+            end
         end
         
         

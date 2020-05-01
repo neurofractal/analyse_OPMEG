@@ -14,6 +14,7 @@ function [shield,freq] = ft_opm_psd_compare(cfg,rawData1,rawData2)
 %   cfg.trial_length    = length of segments (in seconds). Default = 1.
 %   cfg.channel         = 'all', 'MEG', 'RAD', 'TAN'. Default = 'all'.
 %   cfg.plot            = 'yes' or 'no'
+%   cfg.plot_legend     = 'yes' or 'no' (default = 'yes')
 %   cfg.dB              = do you want to plot dB (default = 'yes',
 %                       highly recommended)
 
@@ -47,6 +48,10 @@ end
 
 if ~isfield(cfg, 'plot')
     cfg.plot = 'yes';
+end
+
+if ~isfield(cfg, 'plot_legend')
+    cfg.plot_legend = 'yes';
 end
 
 if ~isfield(cfg, 'dB')
@@ -141,11 +146,13 @@ if strcmp(cfg.plot,'yes')
     xlim([cfg.foi(1), cfg.foi(end)]);
     %ylim([1, 1000]);
     % Legend
-    [~, hobj, ~, ~] = legend(vertcat(label1, 'mean'),'location','eastoutside');
-    hl = findobj(hobj,'type','line');
-    set(hl,'LineWidth',4);
-    ht = findobj(hobj,'type','text');
-    set(ht,'FontSize',12);
+    if strcmp(cfg.plot_legend,'yes');
+        [~, hobj, ~, ~] = legend(vertcat(label1, 'mean'),'location','eastoutside');
+        hl = findobj(hobj,'type','line');
+        set(hl,'LineWidth',4);
+        ht = findobj(hobj,'type','text');
+        set(ht,'FontSize',12);
+    end
 
 else
     disp('NOT PLOTTING');
