@@ -2,7 +2,7 @@ function [data_zapline] = ft_zapline(cfg,data)
 % Function to perform robust detrending (via the NoiseTools) on data
 % arranged in a Fieldtrip structure
 %
-% EXAMPLE USEAGE:   data_detrend = ft_opm_create(cfg,data)
+% EXAMPLE USEAGE:   data_zapped = ft_zapline(cfg,data)
 % ...where, cfg is the input structure
 % 
 %   cfg.ln_freq           = Line noise (50 or 60Hz)
@@ -41,7 +41,7 @@ end
 data_zapline    = data;
 line_noise      = cfg.ln_freq/data.fsample;
 p=[];
-%p.nkeep=cfg.truncate_PC; 
+p.nkeep=cfg.truncate_PC; 
 
 % For every trial
 disp('Zaplining...');
