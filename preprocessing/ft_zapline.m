@@ -48,7 +48,7 @@ disp('Zaplining...');
 for t = 1:length(data.trial)
     data_4_zapline = data.trial{t}';
     data_4_zapline = nt_demean(data_4_zapline);
-    data_out = nt_zapline(data_4_zapline,line_noise,cfg.n_remove);
+    data_out = nt_zapline(data_4_zapline,line_noise,cfg.n_remove,p);
     data_zapline.trial{t} = transpose(data_out);
 end
     
