@@ -1,6 +1,8 @@
 function [data_zapline] = ft_zapline_window(cfg,data)
 % Function to apply the Zapline algorithm (via NoiseTools) on overlapping
 % windows of electrophysiological data arranged in a Fieldtrip structure
+% (Please cite the original paper: 
+% https://doi.org/10.1016/j.neuroimage.2019.116356)
 %
 % EXAMPLE USEAGE:   data_zapped = ft_zapline_window(cfg,data)
 % ...where, cfg is the input structure
@@ -85,7 +87,7 @@ for trial = 1:length(data.trial)
         stop=min(size(x,1),offset+wsize);
         
         % if not enough valid samples grow window:
-        counter=5;
+        counter=0;
         while any (sum(min(w(start:stop),2))) <wsize
             if counter <= 0 ; break; end
             start=max(1,start-wsize/2);
@@ -113,11 +115,11 @@ for trial = 1:length(data.trial)
         % Add triangular weighting to output
         a(start:stop,1)=a(start:stop)+b;
         
-        % Adjust offset parameter
-        offset=offset+wsize/2;
+        % Adjust offset parameter by window size divided by 5
+        offset=offset+wsize/5;
         
         % If we have reached the end of the data BREAK 
-        if offset>size(x,1)-wsize/2; break; end
+        if offset>size(x,1)-wsize/5; break; end
     end
     
     % Adjust triangular weighting
