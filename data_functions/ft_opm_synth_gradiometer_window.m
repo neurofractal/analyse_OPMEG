@@ -1,6 +1,6 @@
 function [data_out] = ft_opm_synth_gradiometer_window(cfg,data_in)
 % Function to regress reference signals from the optically-pumped
-% magnetencephalography (OPMEG) data acquired from the
+% magnetoencephalography (OPMEG) data acquired from the
 % UCL Wellcome Centre for Neuroimaging. 
 %
 % This function applies the regression on over-lapping windows, which has
@@ -118,7 +118,7 @@ for tr = 1:numel(ref_data.trial)
         % Bit of indexing (probably inefficient)
         indx = reshape(1:size(reference,1),ref_size,size(filter_ref,1));
         
-        % For every pair of frequencies...
+        % For every pair of frequencies...tr
         for filt = 1:size(filter_ref,1)
             if tr == 1
                 fprintf('Filtering reference data: %3dHz - %3dHz ... \n',...
@@ -157,17 +157,14 @@ for tr = 1:numel(ref_data.trial)
 
     %% Start of Window-Loop
     
-    % Get data for this trial
-    x = megind;
-    
     % Create array of zeros for data
-    y=zeros(size(x));
+    meg_ind_synth_grad  = zeros(size(megind));
     % Create array of zeros for triangular weighting
-    a=zeros(1,size(x,2));
+    a                   = zeros(1,size(megind,2));
     
     % Weighting? I could probably take this out later
-    w=ones(size(x));
-    if size(w,1)==1; w=repmat(w,1,size(x,1)); end
+    w=ones(size(megind));
+    if size(w,1)==1; w=repmat(w,1,size(megind,1)); end
     
     
     % Start at 0
@@ -177,59 +174,59 @@ for tr = 1:numel(ref_data.trial)
         
         % Calculate start and stop points for this loop 
         start=offset+1;
-        stop=min(size(x,2),offset+wsize);
+        stop=min(size(megind,2),offset+wsize);
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % These values are grown by a factor of 5
         % Is this needed??
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        counter=5;
+        counter=0;
         while any (sum(min(w(start:stop),1))) <wsize
             if counter <= 0 ; break; end
             start=max(1,start-wsize/2);
-            stop=min(size(x,2),stop+wsize/2);
+            stop=min(size(megind,2),stop+wsize/2);
             counter=counter-1;
         end
         if rem(stop-start+1,2)==1; stop=stop-1; end
         wsize2=stop-start+1;
         
        % Do gradiometry
-        beta    = pinv(reference(start:stop,:))*x(:,start:stop)';
-        yy      = (x(:,start:stop)' - reference(start:stop,:)*beta)';
+        beta    = pinv(reference(start:stop,:))*megind(:,start:stop)';
+        yy      = (megind(:,start:stop)' - reference(start:stop,:)*beta)';
         
         % triangular weighting (specified via b variable)
         if start==1
             b=[ones(1,wsize2/2)*wsize2/2, wsize2/2:-1:1];
-        elseif stop==size(x,2)
+        elseif stop==size(megind,2)
             b=[1:wsize2/2, ones(1,wsize2/2)*wsize2/2];
         else
             b=[1:wsize2/2, wsize2/2:-1:1];
         end
         
-        % Add to y variable outside the loop, weighted by b
-        y(:,start:stop)=y(:,start:stop)+bsxfun(@times,yy,b);
+        % Add to meg_ind_synth_grad variable outside the loop, weighted by b
+        meg_ind_synth_grad(:,start:stop)=meg_ind_synth_grad(:,start:stop)+bsxfun(@times,yy,b);
         
         % Add triangular weighting to variable outside the loop
         a(1,start:stop)=a(start:stop)+b;
         
-        % Adjust offset parameter
-        offset=offset+wsize/2;
+        % Adjust offset parameter by window size divided by 5
+        offset=offset+wsize/5;
         
         % If we have reached the end of the data BREAK 
-        if offset>size(x,2)-wsize/2; break; end
+        if offset>size(megind,2)-wsize/5; break; end
     end
     
     % Adjust for triangular weighting
-    y=bsxfun(@times,y,1./a); 
+    meg_ind_synth_grad=bsxfun(@times,meg_ind_synth_grad,1./a); 
     % Find any NaN values and convert to 0
-    y(isnan(y))=0;
+    meg_ind_synth_grad(isnan(meg_ind_synth_grad))=0;
 
     %% Return the data!
     if strcmp(cfg.return_all,'yes')
-        data_out.trial{tr}(ch_indx,:) = y;
+        data_out.trial{tr}(ch_indx,:) = meg_ind_synth_grad;
     else
-        data_out.trial{tr} = y;
+        data_out.trial{tr} = meg_ind_synth_grad;
     end
 end
 
