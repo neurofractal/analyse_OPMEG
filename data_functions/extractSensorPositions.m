@@ -391,13 +391,13 @@ Pz          = [centrePoint(:,3);centrePoint(:,3)];
 % Create list describing whether orientation corresponds to 
 % TAN or RAD OPM sensors. Where sensors are placed tan (e.g. for hingecast)
 % the sensitive axis will need to be flipped
-corresponding_sens = cell(length(filename)*2,1);
+corresponding_sens = cell(length(sensorListing)*2,1);
 if strcmp(cfg.slotori,'tan')
-    corresponding_sens(1:length(filename))      = {'RAD'};
-    corresponding_sens(length(filename)+1:end)  = {'TAN'};
+    corresponding_sens(1:length(sensorListing))      = {'RAD'};
+    corresponding_sens(length(sensorListing)+1:end)  = {'TAN'};
 elseif strcmp(cfg.slotori,'rad')
-    corresponding_sens(1:length(filename))      = {'TAN'};
-    corresponding_sens(length(filename)+1:end)  = {'RAD'};
+    corresponding_sens(1:length(sensorListing))      = {'TAN'};
+    corresponding_sens(length(sensorListing)+1:end)  = {'RAD'};
 else
     corresponding_sens(1:end)                       = {'UNKNOWN'};
 end
