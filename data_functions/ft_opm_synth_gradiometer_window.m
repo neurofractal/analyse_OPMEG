@@ -165,12 +165,12 @@ for tr = 1:numel(ref_data.trial)
     % Weighting? I could probably take this out later
     w=ones(size(megind));
     if size(w,1)==1; w=repmat(w,1,size(megind,1)); end
-    
-    
+        
     % Start at 0
     offset=0;
+    ft_progress('init', 'etf', 'Regressing...')
     while true
-        disp(offset);
+        ft_progress(offset/size(megind,2))        
         
         % Calculate start and stop points for this loop 
         start=offset+1;
@@ -203,7 +203,7 @@ for tr = 1:numel(ref_data.trial)
         else
             b=[1:wsize2/2, wsize2/2:-1:1];
         end
-        
+                
         % Add to meg_ind_synth_grad variable outside the loop, weighted by b
         meg_ind_synth_grad(:,start:stop)=meg_ind_synth_grad(:,start:stop)+bsxfun(@times,yy,b);
         
@@ -216,6 +216,7 @@ for tr = 1:numel(ref_data.trial)
         % If we have reached the end of the data BREAK 
         if offset>size(megind,2)-wsize/5; break; end
     end
+    ft_progress('close')
     
     % Adjust for triangular weighting
     meg_ind_synth_grad=bsxfun(@times,meg_ind_synth_grad,1./a); 
@@ -228,6 +229,8 @@ for tr = 1:numel(ref_data.trial)
     else
         data_out.trial{tr} = meg_ind_synth_grad;
     end
+    
+    
 end
 
 
