@@ -43,7 +43,7 @@ if ~isfield(cfg, 'n_remove')
 end
 
 if ~isfield(cfg, 'truncate_PC')
-    truncate_PC = length(data)-1;
+    cfg.truncate_PC = length(data)-1;
 end
 
 %%
@@ -80,20 +80,17 @@ for trial = 1:length(data.trial)
     
     % Start at 0
     offset=0;
+    
+    % Display progress using ft_progress
+    ft_progress('init', 'etf', 'Zapping...')
+
     while true
-        disp(offset);
+        ft_progress(offset/size(x,1))        
         
+        % Calculate start and stop times
         start=offset+1;
         stop=min(size(x,1),offset+wsize);
         
-        % if not enough valid samples grow window:
-        counter=0;
-        while any (sum(min(w(start:stop),2))) <wsize
-            if counter <= 0 ; break; end
-            start=max(1,start-wsize/2);
-            stop=min(size(x,1),stop+wsize/2);
-            counter=counter-1;
-        end
         if rem(stop-start+1,2)==1; stop=stop-1; end
         wsize2=stop-start+1;
         
@@ -121,7 +118,8 @@ for trial = 1:length(data.trial)
         % If we have reached the end of the data BREAK 
         if offset>size(x,1)-wsize/5; break; end
     end
-    
+    ft_progress('close')
+
     % Adjust triangular weighting
     y=bsxfun(@times,y,1./a); 
     % Find any NaN values and convert to 0
