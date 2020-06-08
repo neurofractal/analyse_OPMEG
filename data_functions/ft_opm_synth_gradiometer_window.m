@@ -125,11 +125,22 @@ for tr = 1:numel(ref_data.trial)
                     filter_ref(filt,1),filter_ref(filt,2));
             end
             
+            % High-pass filter, except where the user has specified 0
+            if filter_ref(filt,1) ~= 0
             data_filt = ft_preproc_highpassfilter(ref,data_in.fsample,...
                 filter_ref(filt,1),5,'but','twopass','reduce');
+            else
+                disp('NOT high-pass filtering');
+                data_filt = ref;
+            end
             
-            data_filt = ft_preproc_lowpassfilter(data_filt,data_in.fsample,...
-                filter_ref(filt,2),5,'but','twopass','reduce');
+            % Low-pass filter, except where the user has specified 0
+            if filter_ref(filt,2) ~= 0
+                data_filt = ft_preproc_lowpassfilter(data_filt,data_in.fsample,...
+                    filter_ref(filt,2),5,'but','twopass','reduce');
+            else
+                disp('Not low-pass filtering');
+            end
             
             reference(indx(1,filt):indx(end,filt),:) = data_filt;
         end
