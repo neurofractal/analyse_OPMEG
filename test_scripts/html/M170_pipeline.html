@@ -1,0 +1,2425 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>M170_pipeline</title><meta name="generator" content="MATLAB 9.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2020-06-22"><meta name="DC.source" content="M170_pipeline.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#1">Paths (RS)</a></li><li><a href="#2">(2) Start preprocessing.</a></li><li><a href="#3">Plot PSD</a></li><li><a href="#4">Resample to 600Hz to speed things up</a></li><li><a href="#5">Filter</a></li><li><a href="#6">Perform synthetic gradiometry</a></li><li><a href="#7">Trial Definition</a></li><li><a href="#8">Load the csv file to know which stimuli was on screen</a></li><li><a href="#9">Select the data for each condition</a></li><li><a href="#10">Plot all the channels avg in one plot</a></li><li><a href="#11">Plot sensor-level topoplot</a></li><li><a href="#12">Source Analysis</a></li><li><a href="#13">Prepare Leadfield</a></li><li><a href="#14">Compute covariance</a></li><li><a href="#15">Source Analysis Proper (using LCMV)</a></li><li><a href="#16">Interpolate onto SPM brain</a></li></ul></div><h2 id="1">Paths (RS)</h2><pre class="codeinput">fieldtripDir    = <span class="string">'/Users/rseymoue/Documents/scripts/fieldtrip-20191213'</span>;
+script_dir      = <span class="string">'/Users/rseymoue/Documents/GitHub/analyse_OPMEG'</span>;
+data_dir        = <span class="string">'/Volumes/Robert T5/OPM_data/benchmarking_26_02/'</span>;
+save_dir        = <span class="string">'/Users/rseymoue/Documents/GitHub/opm_benchmarking_feb_2020/'</span>;
+
+<span class="comment">% Add Fieldtrip to path</span>
+disp(<span class="string">'Adding Fieldtrip and analyse_OPMEG to your MATLAB path'</span>);
+addpath(fieldtripDir)
+ft_defaults;
+
+<span class="comment">% Add analyse_OPMEG Scripts to path</span>
+addpath(genpath(script_dir));
+
+<span class="comment">% cd to save dir</span>
+cd(save_dir)
+</pre><pre class="codeoutput">Adding Fieldtrip and analyse_OPMEG to your MATLAB path
+</pre><h2 id="2">(2) Start preprocessing.</h2><p>Read in the raw data using BIDS</p><pre class="codeinput">cfg             = [];
+cfg.folder      = data_dir;
+cfg.precision   = <span class="string">'single'</span>;
+cfg.bids.task   = <span class="string">'faces'</span>;
+cfg.bids.sub    = <span class="string">'002'</span>;
+cfg.bids.ses    = <span class="string">'001'</span>;
+cfg.bids.run    = <span class="string">'001'</span>;
+rawData         = ft_opm_create(cfg);
+
+<span class="comment">% % Plot using ft_databrowser</span>
+<span class="comment">% ft_databrowser([],rawData);</span>
+</pre><pre class="codeoutput">Warning: Not loaded any coordinate system 
+
+</pre><h2 id="3">Plot PSD</h2><pre class="codeinput">cfg                 = [];
+cfg.channel         = vertcat(ft_channelselection_opm(<span class="string">'MEG'</span>,rawData),<span class="keyword">...</span>
+     <span class="string">'-N0-TAN'</span>,<span class="string">'-N4-TAN'</span>,<span class="string">'-N3-TAN'</span>,<span class="string">'-MV-TAN'</span>);
+cfg.trial_length    = 3;
+cfg.method          = <span class="string">'tim'</span>;
+cfg.foi             = [1 100];
+cfg.plot            = <span class="string">'yes'</span>;
+pow                 = ft_opm_psd(cfg,rawData);
+ylim([1 1e4])
+</pre><pre class="codeoutput">the call to "ft_selectdata" took 4 seconds and required the additional allocation of an estimated 973 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_01.png" alt=""> <h2 id="4">Resample to 600Hz to speed things up</h2><pre class="codeinput">cfg                 = [];
+cfg.resamplefs      = 600;
+[rawData]           = ft_resampledata(cfg, rawData);
+</pre><pre class="codeoutput">the input is raw data with 39 channels and 1 trials
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+resampling data
+resampling data in trial 1 from 1
+
+original sampling rate = 6000 Hz
+new sampling rate = 600 Hz
+the call to "ft_resampledata" took 12 seconds and required the additional allocation of an estimated 1942 MB
+</pre><h2 id="5">Filter</h2><pre class="codeinput">cfg = [];
+cfg.hpfilter        = <span class="string">'yes'</span>;
+cfg.hpfreq      	= 2;
+rawData             = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.lpfilter    = <span class="string">'yes'</span>;
+cfg.lpfreq      = 100;
+rawData         = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.bsfilter    = <span class="string">'yes'</span>;
+cfg.bsfreq      = [115 125];
+rawData         = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.bsfilter    = <span class="string">'yes'</span>;
+cfg.bsfreq      = [97 103];
+rawData         = ft_preprocessing(cfg,rawData);
+</pre><pre class="codeoutput">Warning: the data does not contain a trial definition 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/fixsampleinfo.m',80,1)"&gt;fixsampleinfo at line 80&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',147,1)"&gt;ft_datatype_raw at line 147&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_preprocessing.m',281,1)"&gt;ft_preprocessing at line 281&lt;/a&gt;
+
+Warning: reconstructing sampleinfo by assuming that the trials are consecutive
+segments of a continuous recording 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/fixsampleinfo.m',93,1)"&gt;fixsampleinfo at line 93&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',147,1)"&gt;ft_datatype_raw at line 147&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_preprocessing.m',281,1)"&gt;ft_preprocessing at line 281&lt;/a&gt;
+
+&gt; In fixsampleinfo (line 94)
+  In ft_datatype_raw (line 147)
+  In ft_checkdata (line 268)
+  In ft_preprocessing (line 281)
+  In M170_pipeline (line 52)
+  In evalmxdom&gt;instrumentAndRun (line 109)
+  In evalmxdom (line 21)
+  In publish (line 185)
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 3163 MB
+preprocessing
+preprocessing trial 1 from 1
+
+the call to "ft_preprocessing" took 1 seconds and required the additional allocation of an estimated 3163 MB
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 158 MB
+preprocessing
+preprocessing trial 1 from 1
+
+the call to "ft_preprocessing" took 1 seconds and required the additional allocation of an estimated 158 MB
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+preprocessing
+preprocessing trial 1 from 1
+
+the call to "ft_preprocessing" took 1 seconds and required the additional allocation of an estimated 158 MB
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+preprocessing
+preprocessing trial 1 from 1
+
+the call to "ft_preprocessing" took 1 seconds and required the additional allocation of an estimated 158 MB
+</pre><h2 id="6">Perform synthetic gradiometry</h2><pre class="codeinput">cfg = [];
+cfg.channel = vertcat(ft_channelselection_opm(<span class="string">'MEG'</span>,rawData),<span class="keyword">...</span>
+     <span class="string">'-N0-TAN'</span>,<span class="string">'-N4-TAN'</span>,<span class="string">'-N3-TAN'</span>,<span class="string">'-MV-TAN'</span>,<span class="string">'-N0-RAD'</span>,<span class="string">'-N4-RAD'</span>,<span class="keyword">...</span>
+     <span class="string">'-N3-RAD'</span>,<span class="string">'-MV-RAD'</span>);
+cfg.refchannel = <span class="string">'MEGREF'</span>;
+cfg.filter_ref = [2 30; 40 60; 60 80];
+cfg.derivative = <span class="string">'yes'</span>;
+cfg.return_all = <span class="string">'no'</span>;
+cfg.winsize    = 50;
+[rawData_meg_window] = ft_opm_synth_gradiometer_window(cfg,rawData);
+
+<span class="comment">% Plot the PSD</span>
+cfg                 = [];
+cfg.channel         = <span class="string">'all'</span>;
+cfg.trial_length    = 3;
+cfg.method          = <span class="string">'tim'</span>;
+cfg.foi             = [0.2 100];
+cfg.plot            = <span class="string">'yes'</span>;
+pow                 = ft_opm_psd(cfg,rawData_meg_window);
+
+<span class="comment">% Plot the Shielding Factor</span>
+cfg                 = [];
+cfg.channel         = rawData_meg_window.label;
+cfg.trial_length    = 3;
+cfg.method          = <span class="string">'tim'</span>;
+cfg.foi             = [0.2 100];
+cfg.plot            = <span class="string">'yes'</span>;
+pow                 = ft_opm_psd_compare(cfg,rawData,rawData_meg_window);
+
+<span class="comment">% Low-pass filter at 30</span>
+cfg             = [];
+cfg.lpfilter    = <span class="string">'yes'</span>;
+cfg.lpfreq      = 30;
+rawData_meg     = ft_preprocessing(cfg,rawData_meg_window);
+
+<span class="comment">% % Plot using ft_databrowser</span>
+ft_databrowser([],rawData_meg_window);
+</pre><pre class="codeoutput">Using 30000 data-points per window
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 158 MB
+Selected 24 data channels
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 61 MB
+Selected  8 reference channels
+Filtering reference data:   2Hz -  30Hz ... 
+Filtering reference data:  40Hz -  60Hz ... 
+Filtering reference data:  60Hz -  80Hz ... 
+Regressin'...
+ - estimated time to finish is 0 seconds
+Calculating PSD for ALL channels
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: Unequal number of channels between label and hdr.fieldori fields ...
+Attempting to extract fieldori from label names instead 
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+preprocessing
+preprocessing trial 1 from 1
+
+the call to "ft_preprocessing" took 1 seconds and required the additional allocation of an estimated 12 MB
+the input is raw data with 24 channels and 1 trials
+Warning: the data has been resampled, not showing the events 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_databrowser.m',300,1)"&gt;ft_databrowser at line 300&lt;/a&gt;
+
+detected   0 visual artifacts
+the call to "ft_databrowser" took 1 seconds and required the additional allocation of an estimated 49 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_02.png" alt=""> <img vspace="5" hspace="5" src="M170_pipeline_03.png" alt=""> <img vspace="5" hspace="5" src="M170_pipeline_04.png" alt=""> <h2 id="7">Trial Definition</h2><p>Using 'OPM_TrialFun_RS'</p><pre class="codeinput">cd([data_dir <span class="string">'sub-002/ses-001/meg'</span>]);
+
+cfg = [];
+cfg.dataset                 = <span class="string">'sub-002_ses-001_task-faces_run-001_meg.bin'</span>;
+cfg.trialdef.trigchan       = <span class="string">'FluxZ-B'</span>;
+cfg.trialdef.downsample     = 600;
+cfg.correct_time            = 0.1;
+cfg.trialdef.prestim        = 0.5        <span class="comment">% pre-stimulus interval</span>
+cfg.trialdef.poststim       = 0.7;        <span class="comment">% post-stimulus interval</span>
+cfg.trialfun                = <span class="string">'OPM_TrialFun_RS'</span>;
+banana                      = ft_definetrial(cfg);
+
+<span class="comment">% Redefines the filtered data</span>
+cfg = [];
+cfg.detrend = <span class="string">'yes'</span>;
+data = ft_redefinetrial(banana,rawData_meg_window);
+
+<span class="comment">% Plot the data</span>
+cfg             = [];
+cfg.viewmode    = <span class="string">'vertical'</span>;
+cfg.colormode   = <span class="string">'allblack'</span>;
+ft_databrowser(cfg,data_detrend);
+</pre><pre class="codeoutput">
+cfg = 
+
+  struct with fields:
+
+         dataset: 'sub-002_ses-001_task-faces_run-001_meg.bin'
+        trialdef: [1&times;1 struct]
+    correct_time: 0.1000
+
+evaluating trialfunction 'OPM_TrialFun_RS'
+Warning: Not loaded any coordinate system 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_definetrial.m',180,1)"&gt;ft_definetrial at line 180&lt;/a&gt;
+
+Correcting timing by 0.1s
+found 0 events
+created 450 trials
+the call to "ft_definetrial" took 4 seconds and required the additional allocation of an estimated 318 MB
+the input is raw data with 24 channels and 1 trials
+the call to "ft_redefinetrial" took 0 seconds and required the additional allocation of an estimated 60 MB
+the input is raw data with 24 channels and 450 trials
+Warning: the data has been resampled, not showing the events 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_databrowser.m',300,1)"&gt;ft_databrowser at line 300&lt;/a&gt;
+
+detected   0 visual artifacts
+the call to "ft_prepare_layout" took 0 seconds and required the additional allocation of an estimated 1 MB
+the call to "ft_databrowser" took 1 seconds and required the additional allocation of an estimated 0 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_05.png" alt=""> <h2 id="8">Load the csv file to know which stimuli was on screen</h2><pre class="codeinput">csvfile = readtable([data_dir <span class="string">'M170_RS_run_1_20200226_1141.csv'</span>]);
+<span class="comment">%csvfile = readtable([data_dir 'M170_RS_run_2_20200226_1158.csv']);</span>
+
+<span class="comment">% I made a mistake.. so you need to extract the identity of the stimuli</span>
+<span class="comment">% from the csv file</span>
+stimfile = csvfile.Stim_Path;
+ddd = [];
+
+<span class="keyword">for</span> s = 1:length(stimfile)
+    xxx = split(stimfile{s},<span class="string">'\'</span>);
+    <span class="keyword">if</span> strcmp(xxx{2}(1),<span class="string">'f'</span>)
+        ddd{s,1} = <span class="string">'Famous'</span>;
+    <span class="keyword">elseif</span> strcmp(xxx{2}(1),<span class="string">'s'</span>)
+        ddd{s,1} = <span class="string">'Scrambled'</span>;
+    <span class="keyword">elseif</span> strcmp(xxx{2}(1),<span class="string">'u'</span>)
+        ddd{s,1} = <span class="string">'Unfamiliar'</span>;
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+data.condition = ddd;
+</pre><h2 id="9">Select the data for each condition</h2><pre class="codeinput">cfg                 = [];
+cfg.trials          = contains(data.condition,<span class="string">'Famous'</span>);
+famous_faces        = ft_selectdata(cfg,data);
+cfg.trials          = contains(data.condition,<span class="string">'Unfamiliar'</span>);
+unfamiliar_faces    = ft_selectdata(cfg,data);
+cfg.trials          = contains(data.condition,<span class="string">'Scrambled'</span>);
+scrambled_faces     = ft_selectdata(cfg,data);
+
+<span class="comment">% Append the face data together</span>
+faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);
+
+<span class="comment">% Perform timelockanalysis</span>
+cfg             = [];
+avg_all         = ft_timelockanalysis([],data);
+avg_famous      = ft_timelockanalysis([],famous_faces);
+avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);
+avg_scrambled   = ft_timelockanalysis([],scrambled_faces);
+avg_faces_all   = ft_timelockanalysis([],faces_all);
+
+<span class="comment">% %% Plot each sensor in turn</span>
+<span class="comment">% for i = 1:length(avg_famous.label)</span>
+<span class="comment">%     cfg = [];</span>
+<span class="comment">%     cfg.channel = avg_famous.label{i}</span>
+<span class="comment">%     cfg.parameter = 'avg';</span>
+<span class="comment">%     cfg.title = avg_famous.label{i};</span>
+<span class="comment">%     cfg.baseline = [-0.5 0];</span>
+<span class="comment">%     %cfg.baselinetype = 'relative';</span>
+<span class="comment">%     %cfg.showlegend    = 'yes';</span>
+<span class="comment">%     %cfg.ylim = [-250 250];</span>
+<span class="comment">%     figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...</span>
+<span class="comment">%         avg_scrambled);</span>
+<span class="comment">% end</span>
+<span class="comment">%</span>
+<span class="comment">% %% Now plot a nice sample channel</span>
+<span class="comment">% color_scheme = [0.0157         0    1.0000;</span>
+<span class="comment">%      0.1529    0.6000    0.0039;</span>
+<span class="comment">%      0.8000    0.0667         0];</span>
+<span class="comment">%</span>
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.channel = 'DG-TAN';</span>
+<span class="comment">% cfg.parameter = 'avg';</span>
+<span class="comment">% cfg.title = 'DG-TAN';</span>
+<span class="comment">% cfg.baseline = [-0.5 0];</span>
+<span class="comment">% cfg.linecolor = color_scheme;</span>
+<span class="comment">% cfg.linewidth = 2;</span>
+<span class="comment">% %cfg.showlegend    = 'yes';</span>
+<span class="comment">% cfg.ylim = [-300 300];</span>
+<span class="comment">% figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...</span>
+<span class="comment">%     avg_scrambled);legend({'Famous Face'; 'Unfamiliar Face'; ...</span>
+<span class="comment">%     'Scrambled Face'},'Location','southwest');</span>
+<span class="comment">% xlabel('Time (s)');</span>
+<span class="comment">% ylabel('fT');</span>
+<span class="comment">% set(gca,'FontSize',14);</span>
+<span class="comment">% print('MT_faces_M170_TAN','-dpng','-r300');</span>
+</pre><pre class="codeoutput">Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_appenddata.m',102,1)"&gt;ft_appenddata at line 102&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_appenddata.m',102,1)"&gt;ft_appenddata at line 102&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_appenddata.m',102,1)"&gt;ft_appenddata at line 102&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_appenddata.m',102,1)"&gt;ft_appenddata at line 102&lt;/a&gt;
+
+concatenating over the "rpt" dimension
+Warning: could not determine dimord of "condition" in:
+
+            hdr: [1&times;1 struct]
+        fsample: 600
+           grad: [1&times;1 struct]
+          label: {24&times;1 cell}
+      trialinfo: [150&times;1 double]
+     sampleinfo: [150&times;2 double]
+            cfg: [1&times;1 struct]
+      condition: {150&times;1 cell}
+          dummy: [24&times;1 double]
+    dummydimord: 'chan'
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/private/append_common.m',263,1)"&gt;append_common at line 263&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_appenddata.m',152,1)"&gt;ft_appenddata at line 152&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 1 MB
+the call to "ft_appenddata" took 0 seconds and required the additional allocation of an estimated 2 MB
+the input is raw data with 24 channels and 450 trials
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',101,1)"&gt;ft_timelockanalysis at line 101&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+the call to "ft_timelockanalysis" took 1 seconds and required the additional allocation of an estimated 68 MB
+the input is raw data with 24 channels and 150 trials
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',101,1)"&gt;ft_timelockanalysis at line 101&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+the call to "ft_timelockanalysis" took 0 seconds and required the additional allocation of an estimated 23 MB
+the input is raw data with 24 channels and 150 trials
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',101,1)"&gt;ft_timelockanalysis at line 101&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+the call to "ft_timelockanalysis" took 0 seconds and required the additional allocation of an estimated 0 MB
+the input is raw data with 24 channels and 150 trials
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',101,1)"&gt;ft_timelockanalysis at line 101&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 11 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;150 cell}
+          time: {1&times;150 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [150&times;1 double]
+    sampleinfo: [150&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {150&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+the call to "ft_timelockanalysis" took 0 seconds and required the additional allocation of an estimated 3 MB
+the input is raw data with 24 channels and 300 trials
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 10 MB
+the call to "ft_timelockanalysis" took 0 seconds and required the additional allocation of an estimated 10 MB
+</pre><h2 id="10">Plot all the channels avg in one plot</h2><pre class="codeinput">cfg = [];
+cfg.baseline = [-0.7 0];
+[avg_all] = ft_timelockbaseline(cfg, avg_all)
+
+cfg = [];
+<span class="comment">%cfg.ylim = [-455 455];</span>
+cfg.parameter = <span class="string">'avg'</span>;
+ft_databrowser(cfg,avg_all);
+
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.channel = {'all','-MX-TAN'};</span>
+<span class="comment">% data = ft_selectdata(cfg,data);</span>
+</pre><pre class="codeoutput">the input is timelock data with 24 channels and 721 timebins
+applying baseline correction on avg
+baseline correction invalidates previous variance estimate, removing var
+the call to "ft_timelockbaseline" took 0 seconds and required the additional allocation of an estimated 0 MB
+
+avg_all = 
+
+  struct with fields:
+
+      time: [1&times;721 double]
+     label: {24&times;1 cell}
+      grad: [1&times;1 struct]
+       avg: [24&times;721 double]
+       dof: [24&times;721 double]
+    dimord: 'chan_time'
+       cfg: [1&times;1 struct]
+
+the input is timelock data with 24 channels and 721 timebins
+Warning: the trial definition in the configuration is inconsistent with the
+actual data 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/fixsampleinfo.m',82,1)"&gt;fixsampleinfo at line 82&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_timelock.m',147,1)"&gt;ft_datatype_timelock at line 147&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',270,1)"&gt;ft_checkdata at line 270&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_databrowser.m',294,1)"&gt;ft_databrowser at line 294&lt;/a&gt;
+
+Warning: reconstructing sampleinfo by assuming that the trials are consecutive
+segments of a continuous recording 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/fixsampleinfo.m',93,1)"&gt;fixsampleinfo at line 93&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_timelock.m',147,1)"&gt;ft_datatype_timelock at line 147&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',270,1)"&gt;ft_checkdata at line 270&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_databrowser.m',294,1)"&gt;ft_databrowser at line 294&lt;/a&gt;
+
+&gt; In fixsampleinfo (line 94)
+  In ft_datatype_timelock (line 147)
+  In ft_checkdata (line 270)
+  In ft_databrowser (line 294)
+  In M170_pipeline (line 222)
+  In evalmxdom&gt;instrumentAndRun (line 109)
+  In evalmxdom (line 21)
+  In publish (line 185)
+constructing single trial from "avg"
+Warning: the data has been resampled, not showing the events 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_databrowser.m',300,1)"&gt;ft_databrowser at line 300&lt;/a&gt;
+
+detected   0 visual artifacts
+the call to "ft_databrowser" took 1 seconds and required the additional allocation of an estimated 0 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_06.png" alt=""> <h2 id="11">Plot sensor-level topoplot</h2><pre class="codeinput">cfg = [];
+cfg.xlim = [0.1 0.2];
+cfg.colorbar = <span class="string">'yes'</span>;
+cfg.baseline = [-0.5 0];
+<span class="comment">%cfg.layout = lay;</span>
+figure;ft_topoplotER(cfg,avg_faces_all);
+
+<span class="comment">% %%</span>
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.channel = {'all','-MX-TAN','-MX-RAD'};</span>
+<span class="comment">% data = ft_selectdata(cfg,data);</span>
+</pre><pre class="codeoutput">creating layout from data.grad
+creating layout for meg system
+Warning: the specified sensor configuration has many overlapping channels,
+creating a layout by shifting them around - use a template layout for better
+control over the positioning 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_prepare_layout.m',1360,1)"&gt;ft_prepare_layout&gt;sens2lay at line 1360&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_prepare_layout.m',597,1)"&gt;ft_prepare_layout at line 597&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_topoplotER.m',204,1)"&gt;ft_topoplotER at line 204&lt;/a&gt;
+
+the call to "ft_prepare_layout" took 0 seconds and required the additional allocation of an estimated 0 MB
+the input is timelock data with 24 channels and 721 timebins
+applying baseline correction on avg
+baseline correction invalidates previous variance estimate, removing var
+the call to "ft_timelockbaseline" took 0 seconds and required the additional allocation of an estimated 60 MB
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 67 MB
+Warning: Some points fall outside the outline, please consider using another
+layout 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/plotting/ft_plot_topo.m',173,1)"&gt;ft_plot_topo at line 173&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/private/topoplot_common.m',635,1)"&gt;topoplot_common at line 635&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_topoplotER.m',207,1)"&gt;ft_topoplotER at line 207&lt;/a&gt;
+
+the call to "ft_topoplotER" took 2 seconds and required the additional allocation of an estimated 0 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_07.png" alt=""> <h2 id="12">Source Analysis</h2><pre class="codeinput">load([data_dir <span class="string">'headmodel.mat'</span>]);
+load([data_dir <span class="string">'sourcemodel3d.mat'</span>]);
+</pre><pre class="codeoutput">Warning: Class 'nifti' is an unknown object class or does not have a valid
+'loadobj' method.  Element(s) of this class in array 'sourcemodel3d' have been
+converted to structures. 
+Warning: Class 'file_array' is an unknown object class or does not have a valid
+'loadobj' method.  Element(s) of this class in array 'sourcemodel3d' have been
+converted to structures. 
+</pre><h2 id="13">Prepare Leadfield</h2><pre class="codeinput">disp(<span class="string">'Preparing Leadfield'</span>);
+cfg = [];
+cfg.method=<span class="string">'lcmv'</span>;
+cfg.channel = data.label;
+cfg.grid = sourcemodel3d;
+cfg.headmodel = headmodel;
+cfg.grad = rawData.grad;
+<span class="comment">%cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)</span>
+cfg.normalize       = <span class="string">'yes'</span> ; <span class="comment">%Normalise Leadfield: 'yes' for beamformer</span>
+<span class="comment">%cfg.normalizeparam  = 1;</span>
+lf = ft_prepare_leadfield(cfg);
+
+<span class="comment">% make a figure of the single subject{i} headmodel, and grid positions</span>
+figure; hold <span class="string">on</span>;
+ft_plot_vol(headmodel,  <span class="string">'facecolor'</span>, <span class="string">'cortex'</span>, <span class="string">'edgecolor'</span>, <span class="string">'none'</span>);
+alpha <span class="string">0.5</span>; camlight;
+<span class="comment">%ft_plot_mesh(lf.pos(lf.inside,:));</span>
+ft_plot_sens(rawData.grad, <span class="string">'style'</span>, <span class="string">'r*'</span>,<span class="string">'orientation'</span>,<span class="string">'true'</span>); view([0,0]);
+<span class="comment">%print('lf_headmodel_sens','-dpng','-r100');</span>
+</pre><pre class="codeoutput">Preparing Leadfield
+Warning: use cfg.sourcemodel instead of cfg.grid 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkconfig.m',128,1)"&gt;ft_checkconfig at line 128&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_prepare_leadfield.m',133,1)"&gt;ft_prepare_leadfield at line 133&lt;/a&gt;
+
+using gradiometers specified in the configuration
+computing surface normals
+creating sourcemodel based on user specified dipole positions
+using gradiometers specified in the configuration
+20173 dipoles inside, 22259 dipoles outside brain
+the call to "ft_prepare_sourcemodel" took 4 seconds and required the additional allocation of an estimated 0 MB
+computing leadfield
+computing leadfield 20173/20173
+
+the call to "ft_prepare_leadfield" took 58 seconds and required the additional allocation of an estimated 59 MB
+Warning: FT_PLOT_VOL is only a backward compatibility wrapper, which will soon
+be removed. Please call FT_PLOT_HEADMODEL instead. 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/plotting/ft_plot_vol.m',11,1)"&gt;ft_plot_vol at line 11&lt;/a&gt;
+
+</pre><img vspace="5" hspace="5" src="M170_pipeline_08.png" alt=""> <h2 id="14">Compute covariance</h2><pre class="codeinput">cfg                  = [];
+cfg.covariance       = <span class="string">'yes'</span>;
+cfg.vartrllength     = 2;
+cfg.covariancewindow = [-0.3 0.3];
+avg                  = ft_timelockanalysis(cfg,data);
+
+<span class="comment">% %Make a dummy variable with covariance matrices averaged</span>
+<span class="comment">% avg_combined        = avg_deviant;</span>
+<span class="comment">% avg_combined.cov    = (avg_deviant.cov+avg_predeviant.cov)./2;</span>
+</pre><pre class="codeoutput">the input is raw data with 24 channels and 450 trials
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',101,1)"&gt;ft_timelockanalysis at line 101&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',141,1)"&gt;ft_timelockanalysis at line 141&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',141,1)"&gt;ft_timelockanalysis at line 141&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',141,1)"&gt;ft_timelockanalysis at line 141&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 33 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',144,1)"&gt;ft_timelockanalysis at line 144&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',144,1)"&gt;ft_timelockanalysis at line 144&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',144,1)"&gt;ft_timelockanalysis at line 144&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',123,1)"&gt;ft_selectdata at line 123&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_selectdata.m',188,1)"&gt;ft_selectdata at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',195,1)"&gt;ft_timelockanalysis at line 195&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 16 MB
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',89,1)"&gt;ft_datatype_raw at line 89&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+Warning: could not determine dimord of "condition" in:
+
+           hdr: [1&times;1 struct]
+         trial: {1&times;450 cell}
+          time: {1&times;450 cell}
+       fsample: 600
+          grad: [1&times;1 struct]
+         label: {24&times;1 cell}
+     trialinfo: [450&times;1 double]
+    sampleinfo: [450&times;2 double]
+           cfg: [1&times;1 struct]
+     condition: {450&times;1 cell}
+
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',681,1)"&gt;getdimord&gt;warning_dimord_could_not_be_determined at line 681&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/getdimord.m',631,1)"&gt;getdimord at line 631&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/private/makessense.m',41,1)"&gt;makessense at line 41&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_datatype_raw.m',94,1)"&gt;ft_datatype_raw at line 94&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',268,1)"&gt;ft_checkdata at line 268&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',1497,1)"&gt;ft_checkdata&gt;raw2timelock at line 1497&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkdata.m',469,1)"&gt;ft_checkdata at line 469&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_timelockanalysis.m',204,1)"&gt;ft_timelockanalysis at line 204&lt;/a&gt;
+
+the call to "ft_timelockanalysis" took 1 seconds and required the additional allocation of an estimated 85 MB
+</pre><h2 id="15">Source Analysis Proper (using LCMV)</h2><pre class="codeinput">cfg                    = [];
+cfg.channel            = data.label;
+cfg.grad               = rawData.grad;
+cfg.method             = <span class="string">'lcmv'</span>;
+cfg.grid               = lf;
+cfg.headmodel          = headmodel;
+cfg.lcmv.keepfilter    = <span class="string">'yes'</span>;
+cfg.lcmv.fixedori      = <span class="string">'yes'</span>;
+cfg.lcmv.projectnoise  = <span class="string">'yes'</span>;
+cfg.lcmv.weightnorm    = <span class="string">'nai'</span>;
+cfg.lcmv.lambda        = <span class="string">'5%'</span>;
+sourceall              = ft_sourceanalysis(cfg, avg);
+
+<span class="comment">% Replace .pos field with template_grid.pos</span>
+
+[t, r] = ft_version;
+
+load(fullfile(r,<span class="string">'template/sourcemodel/standard_sourcemodel3d5mm.mat'</span>));
+template_grid = sourcemodel;
+clear <span class="string">sourcemodel</span>
+
+sourceall.pos = template_grid.pos;
+
+<span class="comment">% Remove cfg field to save memory</span>
+sourceall = rmfield(sourceall,<span class="string">'cfg'</span>);
+
+addpath(genpath(<span class="string">'/Users/rseymoue/Documents/Github/MQ_MEG_Scripts'</span>));
+
+source_pow_post = get_source_pow(data,sourceall,[0.15 0.2]);
+source_pow_pre = get_source_pow(data,sourceall,[-0.2 -0.15]);
+
+cfg = [];
+cfg.operation = <span class="string">'subtract'</span>;
+cfg.parameter = <span class="string">'pow'</span>;
+source_R = ft_math(cfg,source_pow_post,source_pow_pre);
+
+cfg               = [];
+cfg.method        = <span class="string">'ortho'</span>;
+cfg.funparameter  = <span class="string">'pow'</span>;
+cfg.location = <span class="string">'max'</span>;
+ft_sourceplot(cfg,source_R);
+ft_hastoolbox(<span class="string">'brewermap'</span>, 1);         <span class="comment">% ensure this toolbox is on the path</span>
+colormap(flipud(brewermap(64,<span class="string">'RdBu'</span>))) <span class="comment">% change the colormap</span>
+</pre><pre class="codeoutput">the input is timelock data with 24 channels and 721 timebins
+Warning: use cfg.sourcemodel instead of cfg.grid 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkconfig.m',128,1)"&gt;ft_checkconfig at line 128&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_sourceanalysis.m',187,1)"&gt;ft_sourceanalysis at line 187&lt;/a&gt;
+
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+Your data and configuration allow for multiple sensor definitions.
+Warning: using gradiometers specified in the configuration\n 
+computing surface normals
+creating sourcemodel based on user specified dipole positions
+using gradiometers specified in the configuration
+20173 dipoles inside, 22259 dipoles outside brain
+the call to "ft_prepare_sourcemodel" took 3 seconds and required the additional allocation of an estimated 76 MB
+
+
+Subselecting/reordering the channels in the precomputed leadfields
+
+scanning repetition 1
+using precomputed leadfields
+scanning grid
+scanning grid 20173/20173
+
+the call to "ft_sourceanalysis" took 8 seconds and required the additional allocation of an estimated 1 MB
+Getting source level power from 0.150s to 0.200s
+cfg field has already been removed
+Getting source level power from -0.200s to -0.150s
+cfg field has already been removed
+the call to "ft_selectdata" took 5 seconds and required the additional allocation of an estimated 0 MB
+selecting pow from the first input argument
+subtracting the 2nd input argument from the 1st
+the call to "ft_math" took 10 seconds and required the additional allocation of an estimated 3 MB
+the input is source data with 42432 brainordinates on a [32 39 34] grid
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 0 MB
+not plotting anatomy
+not using an atlas
+not using a region-of-interest
+
+click left mouse button to reposition the cursor
+click and hold right mouse button to update the position while moving the mouse
+use the arrowkeys to navigate in the current axis
+the call to "ft_sourceplot" took 0 seconds and required the additional allocation of an estimated 5 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_09.png" alt=""> <h2 id="16">Interpolate onto SPM brain</h2><pre class="codeinput">spm_brain = ft_read_mri(fullfile(r,<span class="string">'template/anatomy/single_subj_T1.nii'</span>));
+cfg              = [];
+cfg.voxelcoord   = <span class="string">'no'</span>;
+cfg.parameter    = <span class="string">'pow'</span>;
+cfg.interpmethod = <span class="string">'nearest'</span>;
+sourceI  = ft_sourceinterpolate(cfg, source_R, spm_brain);
+
+<span class="comment">% Plot</span>
+cfg = [];
+cfg.funparameter = <span class="string">'pow'</span>;
+cfg.location = <span class="string">'max'</span>;
+ft_sourceplot(cfg,sourceI);
+ft_hastoolbox(<span class="string">'brewermap'</span>, 1);         <span class="comment">% ensure this toolbox is on the path</span>
+colormap(flipud(brewermap(64,<span class="string">'RdBu'</span>))) <span class="comment">% change the colormap</span>
+<span class="comment">%saveas(gcf,'sourceI_new3.png'); drawnow;</span>
+
+<span class="comment">%</span>
+<span class="comment">% %%</span>
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.method          = 'surface';</span>
+<span class="comment">% cfg.funparameter    = 'pow';</span>
+<span class="comment">% cfg.colorbar        = 'yes';</span>
+<span class="comment">% %cfg.funcolorlim     = [-5.1e-14 5.1e-14];</span>
+<span class="comment">% %cfg.maskparameter = 'mask';</span>
+<span class="comment">% %cfg.funcolorlim    = [0 20];</span>
+<span class="comment">% %cfg.downsample     = 6;</span>
+<span class="comment">% cfg.projmethod     = 'nearest';</span>
+<span class="comment">% cfg.surfinflated   = 'surface_inflated_both_caret.mat';</span>
+<span class="comment">% %cfg.surfdownsample = 10</span>
+<span class="comment">% %cfg.projthresh     = 0.6;</span>
+<span class="comment">% cfg.camlight       = 'no';</span>
+<span class="comment">% ft_sourceplot(cfg, sourceI);</span>
+<span class="comment">% try</span>
+<span class="comment">%     ft_hastoolbox('brewermap', 1);</span>
+<span class="comment">%     colormap(flipud(brewermap(64,'RdBu'))) % change the colormap</span>
+<span class="comment">% catch</span>
+<span class="comment">%     warning('default colormap used instead of red/blue one');</span>
+<span class="comment">% end</span>
+<span class="comment">% light ('Position',[-180 0 0])</span>
+<span class="comment">% light ('Position',[180 0 0])</span>
+<span class="comment">% material dull;</span>
+<span class="comment">% title('');</span>
+<span class="comment">% view([180 0]);</span>
+<span class="comment">% set(gca,'FontSize',14);</span>
+<span class="comment">% drawnow;</span>
+<span class="comment">%</span>
+<span class="comment">% %% Do virtual electrode analysis</span>
+<span class="comment">% %%</span>
+<span class="comment">% % Now we compute nonlinear warping between MNI and</span>
+<span class="comment">% mri = ft_read_mri([data_dir 'mmsMQ0484_orig.img']);</span>
+<span class="comment">% mri.coordsys = 'neuromag';</span>
+<span class="comment">%</span>
+<span class="comment">% cfg             = [];</span>
+<span class="comment">% cfg.template    = mri;</span>
+<span class="comment">% cfg.nonlinear   = 'yes';</span>
+<span class="comment">% norm            = ft_volumenormalise([],mri);</span>
+<span class="comment">%</span>
+<span class="comment">% pos = [-28 -72 8];</span>
+<span class="comment">%</span>
+<span class="comment">% % Now we warp the MNI coordinates using the nonlinear warping parameters</span>
+<span class="comment">% posback         = ft_warp_apply(norm.params,pos,'sn2individual');</span>
+<span class="comment">% % xyz positions in individual coordinates</span>
+<span class="comment">% pos_grid        = ft_warp_apply(pinv(norm.initial),posback);</span>
+<span class="comment">%</span>
+<span class="comment">% %% Prepare Leadfield</span>
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.method='lcmv';</span>
+<span class="comment">% cfg.channel = data.label;</span>
+<span class="comment">% cfg.grid.pos = pos_grid;</span>
+<span class="comment">% cfg.grid.unit = 'mm';</span>
+<span class="comment">% cfg.headmodel = headmodel;</span>
+<span class="comment">% cfg.grad = rawData.grad;</span>
+<span class="comment">% %cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)</span>
+<span class="comment">% cfg.normalize       = 'yes' ; %Normalise Leadfield: 'yes' for beamformer</span>
+<span class="comment">% %cfg.normalizeparam  = 1;</span>
+<span class="comment">% lf_2 = ft_prepare_leadfield(cfg);</span>
+<span class="comment">%</span>
+<span class="comment">% % make a figure of the single subject{i} headmodel, and grid positions</span>
+<span class="comment">% figure; hold on;</span>
+<span class="comment">% ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');</span>
+<span class="comment">% alpha 0.5; camlight;</span>
+<span class="comment">% ft_plot_mesh(lf_2.pos(lf_2.inside,:),'vertexsize',20,'vertexcolor','r');</span>
+<span class="comment">% ft_plot_sens(rawData.grad, 'style', 'r*'); view([0,0]);</span>
+<span class="comment">%</span>
+<span class="comment">%</span>
+<span class="comment">% cfg                    = [];</span>
+<span class="comment">% cfg.channel            = data.label;</span>
+<span class="comment">% cfg.grad               = rawData.grad;</span>
+<span class="comment">% cfg.method             = 'lcmv';</span>
+<span class="comment">% cfg.grid               = lf_2;</span>
+<span class="comment">% cfg.headmodel          = headmodel;</span>
+<span class="comment">% cfg.lcmv.keepfilter    = 'yes';</span>
+<span class="comment">% cfg.lcmv.fixedori      = 'yes';</span>
+<span class="comment">% cfg.lcmv.projectnoise  = 'yes';</span>
+<span class="comment">% %cfg.lcmv.weightnorm    = 'nai';</span>
+<span class="comment">% cfg.lcmv.lambda        = '5%';</span>
+<span class="comment">% sourceall              = ft_sourceanalysis(cfg, avg);</span>
+<span class="comment">%</span>
+<span class="comment">% % Find filter from max point</span>
+<span class="comment">% filter = sourceall.avg.filter{1,1};</span>
+<span class="comment">%</span>
+<span class="comment">% VE = [];</span>
+<span class="comment">% VE.label = {'max'};</span>
+<span class="comment">% VE.trialinfo = data.trialinfo;</span>
+<span class="comment">% VE.condition = data.condition;</span>
+<span class="comment">% for subs=1:(length(data.trialinfo))</span>
+<span class="comment">%     % note that this is the non-filtered "raw" data</span>
+<span class="comment">%     VE.time{subs}       = data.time{subs};</span>
+<span class="comment">%     VE.trial{subs}(1,:) = filter(1,:)*data.trial{subs}(:,:);</span>
+<span class="comment">% end</span>
+<span class="comment">%</span>
+<span class="comment">% % Select data based on conditions</span>
+<span class="comment">% cfg                 = [];</span>
+<span class="comment">% cfg.trials          = contains(VE.condition,'Famous');</span>
+<span class="comment">% famous_faces        = ft_selectdata(cfg,VE);</span>
+<span class="comment">% cfg.trials          = contains(VE.condition,'Unfamiliar');</span>
+<span class="comment">% unfamiliar_faces    = ft_selectdata(cfg,VE);</span>
+<span class="comment">% cfg.trials          = contains(VE.condition,'Scrambled');</span>
+<span class="comment">% scrambled_faces     = ft_selectdata(cfg,VE);</span>
+<span class="comment">%</span>
+<span class="comment">%</span>
+<span class="comment">% % Append the face data together</span>
+<span class="comment">% faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);</span>
+<span class="comment">%</span>
+<span class="comment">% % Perform timelockanalysis</span>
+<span class="comment">% cfg             = [];</span>
+<span class="comment">% avg_famous      = ft_timelockanalysis([],famous_faces);</span>
+<span class="comment">% avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);</span>
+<span class="comment">% avg_scrambled   = ft_timelockanalysis([],scrambled_faces);</span>
+<span class="comment">% avg_faces_all   = ft_timelockanalysis([],faces_all);</span>
+<span class="comment">%</span>
+<span class="comment">% %% Plot each sensor in turn</span>
+<span class="comment">% cfg = [];</span>
+<span class="comment">% cfg.parameter = 'avg';</span>
+<span class="comment">% cfg.baseline = [-0.5 0];</span>
+<span class="comment">% cfg.showlegend    = 'yes';</span>
+<span class="comment">% cfg.linewidth = 2;</span>
+<span class="comment">% %cfg.ylim = [-250 250];</span>
+<span class="comment">% figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...</span>
+<span class="comment">%     avg_scrambled);</span>
+<span class="comment">% legend({'Famous';'Unfamiliar';'Scrambled'});</span>
+<span class="comment">% set(gca,'FontSize',20);</span>
+<span class="comment">% xlabel('Time (s)');</span>
+<span class="comment">% title('');</span>
+<span class="comment">%</span>
+<span class="comment">%</span>
+</pre><pre class="codeoutput">Warning: The field cfg.voxelcoord is unused, it will be removed from your
+configuration
+ 
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/utilities/ft_checkconfig.m',188,1)"&gt;ft_checkconfig at line 188&lt;/a&gt;
+ In &lt;a href = "matlab: opentoline('/Users/rseymoue/Documents/scripts/fieldtrip-20191213/ft_sourceinterpolate.m',114,1)"&gt;ft_sourceinterpolate at line 114&lt;/a&gt;
+
+the input is volume data with dimensions [91 109 91]
+the input is source data with 42432 brainordinates on a [32 39 34] grid
+could not reshape "time" to the dimensions of the volume
+selecting subvolume of 65.0%
+interpolating
+interpolating 100.0%
+
+reslicing and interpolating pow
+interpolating
+interpolating 100.0%
+
+the call to "ft_sourceinterpolate" took 3 seconds and required the additional allocation of an estimated 102 MB
+the input is source data with 902629 brainordinates on a [91 109 91] grid
+the call to "ft_selectdata" took 0 seconds and required the additional allocation of an estimated 39 MB
+scaling anatomy to [0 1]
+not using an atlas
+not using a region-of-interest
+
+click left mouse button to reposition the cursor
+click and hold right mouse button to update the position while moving the mouse
+use the arrowkeys to navigate in the current axis
+the call to "ft_sourceplot" took 1 seconds and required the additional allocation of an estimated 32 MB
+</pre><img vspace="5" hspace="5" src="M170_pipeline_10.png" alt=""> <p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2016b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Paths (RS)
+fieldtripDir    = '/Users/rseymoue/Documents/scripts/fieldtrip-20191213';
+script_dir      = '/Users/rseymoue/Documents/GitHub/analyse_OPMEG';
+data_dir        = '/Volumes/Robert T5/OPM_data/benchmarking_26_02/';
+save_dir        = '/Users/rseymoue/Documents/GitHub/opm_benchmarking_feb_2020/';
+
+% Add Fieldtrip to path
+disp('Adding Fieldtrip and analyse_OPMEG to your MATLAB path');
+addpath(fieldtripDir)
+ft_defaults;
+
+% Add analyse_OPMEG Scripts to path
+addpath(genpath(script_dir));
+
+% cd to save dir
+cd(save_dir)
+
+%% (2) Start preprocessing.
+% Read in the raw data using BIDS
+cfg             = [];
+cfg.folder      = data_dir;
+cfg.precision   = 'single';
+cfg.bids.task   = 'faces';
+cfg.bids.sub    = '002';
+cfg.bids.ses    = '001';
+cfg.bids.run    = '001';
+rawData         = ft_opm_create(cfg);
+
+% % Plot using ft_databrowser
+% ft_databrowser([],rawData);
+
+%% Plot PSD
+cfg                 = [];
+cfg.channel         = vertcat(ft_channelselection_opm('MEG',rawData),...
+     '-N0-TAN','-N4-TAN','-N3-TAN','-MV-TAN');
+cfg.trial_length    = 3;
+cfg.method          = 'tim';
+cfg.foi             = [1 100];
+cfg.plot            = 'yes';
+pow                 = ft_opm_psd(cfg,rawData);
+ylim([1 1e4])
+
+%% Resample to 600Hz to speed things up 
+cfg                 = [];
+cfg.resamplefs      = 600;
+[rawData]           = ft_resampledata(cfg, rawData);
+
+%% Filter
+cfg = [];
+cfg.hpfilter        = 'yes';
+cfg.hpfreq      	= 2;
+rawData             = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.lpfilter    = 'yes';
+cfg.lpfreq      = 100;
+rawData         = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.bsfilter    = 'yes';
+cfg.bsfreq      = [115 125];
+rawData         = ft_preprocessing(cfg,rawData);
+
+cfg = [];
+cfg.bsfilter    = 'yes';
+cfg.bsfreq      = [97 103];
+rawData         = ft_preprocessing(cfg,rawData);
+
+%% Perform synthetic gradiometry
+cfg = [];
+cfg.channel = vertcat(ft_channelselection_opm('MEG',rawData),...
+     '-N0-TAN','-N4-TAN','-N3-TAN','-MV-TAN','-N0-RAD','-N4-RAD',...
+     '-N3-RAD','-MV-RAD');
+cfg.refchannel = 'MEGREF';
+cfg.filter_ref = [2 30; 40 60; 60 80];
+cfg.derivative = 'yes';
+cfg.return_all = 'no';
+cfg.winsize    = 50;
+[rawData_meg_window] = ft_opm_synth_gradiometer_window(cfg,rawData);
+
+% Plot the PSD
+cfg                 = [];
+cfg.channel         = 'all';
+cfg.trial_length    = 3;
+cfg.method          = 'tim';
+cfg.foi             = [0.2 100];
+cfg.plot            = 'yes';
+pow                 = ft_opm_psd(cfg,rawData_meg_window);
+
+% Plot the Shielding Factor
+cfg                 = [];
+cfg.channel         = rawData_meg_window.label;
+cfg.trial_length    = 3;
+cfg.method          = 'tim';
+cfg.foi             = [0.2 100];
+cfg.plot            = 'yes';
+pow                 = ft_opm_psd_compare(cfg,rawData,rawData_meg_window);
+
+% Low-pass filter at 30
+cfg             = [];
+cfg.lpfilter    = 'yes';
+cfg.lpfreq      = 30;
+rawData_meg     = ft_preprocessing(cfg,rawData_meg_window);
+
+% % Plot using ft_databrowser
+ft_databrowser([],rawData_meg_window);
+
+%% Trial Definition
+% Using 'OPM_TrialFun_RS'
+cd([data_dir 'sub-002/ses-001/meg']);
+
+cfg = [];
+cfg.dataset                 = 'sub-002_ses-001_task-faces_run-001_meg.bin';
+cfg.trialdef.trigchan       = 'FluxZ-B';
+cfg.trialdef.downsample     = 600;
+cfg.correct_time            = 0.1;
+cfg.trialdef.prestim        = 0.5        % pre-stimulus interval
+cfg.trialdef.poststim       = 0.7;        % post-stimulus interval
+cfg.trialfun                = 'OPM_TrialFun_RS';
+banana                      = ft_definetrial(cfg);
+
+% Redefines the filtered data
+cfg = [];
+cfg.detrend = 'yes';
+data = ft_redefinetrial(banana,rawData_meg_window);
+
+% Plot the data
+cfg             = [];
+cfg.viewmode    = 'vertical';
+cfg.colormode   = 'allblack';
+ft_databrowser(cfg,data_detrend);
+
+%% Load the csv file to know which stimuli was on screen
+csvfile = readtable([data_dir 'M170_RS_run_1_20200226_1141.csv']);
+%csvfile = readtable([data_dir 'M170_RS_run_2_20200226_1158.csv']);
+
+% I made a mistake.. so you need to extract the identity of the stimuli
+% from the csv file
+stimfile = csvfile.Stim_Path;
+ddd = [];
+
+for s = 1:length(stimfile)
+    xxx = split(stimfile{s},'\');
+    if strcmp(xxx{2}(1),'f')
+        ddd{s,1} = 'Famous';
+    elseif strcmp(xxx{2}(1),'s')
+        ddd{s,1} = 'Scrambled';
+    elseif strcmp(xxx{2}(1),'u')
+        ddd{s,1} = 'Unfamiliar';
+    end
+end
+
+data.condition = ddd;
+
+
+
+%% Select the data for each condition
+cfg                 = [];
+cfg.trials          = contains(data.condition,'Famous');
+famous_faces        = ft_selectdata(cfg,data);
+cfg.trials          = contains(data.condition,'Unfamiliar');
+unfamiliar_faces    = ft_selectdata(cfg,data);
+cfg.trials          = contains(data.condition,'Scrambled');
+scrambled_faces     = ft_selectdata(cfg,data);
+
+% Append the face data together
+faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);
+
+% Perform timelockanalysis
+cfg             = [];
+avg_all         = ft_timelockanalysis([],data);
+avg_famous      = ft_timelockanalysis([],famous_faces);
+avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);
+avg_scrambled   = ft_timelockanalysis([],scrambled_faces);
+avg_faces_all   = ft_timelockanalysis([],faces_all);
+
+% %% Plot each sensor in turn
+% for i = 1:length(avg_famous.label)
+%     cfg = [];
+%     cfg.channel = avg_famous.label{i}
+%     cfg.parameter = 'avg';
+%     cfg.title = avg_famous.label{i};
+%     cfg.baseline = [-0.5 0];
+%     %cfg.baselinetype = 'relative';
+%     %cfg.showlegend    = 'yes';
+%     %cfg.ylim = [-250 250];
+%     figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...
+%         avg_scrambled);
+% end
+% 
+% %% Now plot a nice sample channel
+% color_scheme = [0.0157         0    1.0000;
+%      0.1529    0.6000    0.0039;
+%      0.8000    0.0667         0];
+%     
+% cfg = [];
+% cfg.channel = 'DG-TAN';
+% cfg.parameter = 'avg';
+% cfg.title = 'DG-TAN';
+% cfg.baseline = [-0.5 0];
+% cfg.linecolor = color_scheme;
+% cfg.linewidth = 2;
+% %cfg.showlegend    = 'yes';
+% cfg.ylim = [-300 300];
+% figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...
+%     avg_scrambled);legend({'Famous Face'; 'Unfamiliar Face'; ...
+%     'Scrambled Face'},'Location','southwest');
+% xlabel('Time (s)');
+% ylabel('fT');
+% set(gca,'FontSize',14);
+% print('MT_faces_M170_TAN','-dpng','-r300');
+
+%% Plot all the channels avg in one plot
+
+cfg = [];
+cfg.baseline = [-0.7 0];
+[avg_all] = ft_timelockbaseline(cfg, avg_all)
+
+cfg = [];
+%cfg.ylim = [-455 455];
+cfg.parameter = 'avg';
+ft_databrowser(cfg,avg_all);
+
+% cfg = [];
+% cfg.channel = {'all','-MX-TAN'};
+% data = ft_selectdata(cfg,data);
+
+%% Plot sensor-level topoplot
+cfg = [];
+cfg.xlim = [0.1 0.2];
+cfg.colorbar = 'yes';
+cfg.baseline = [-0.5 0];
+%cfg.layout = lay;
+figure;ft_topoplotER(cfg,avg_faces_all);
+
+% %%
+% cfg = [];
+% cfg.channel = {'all','-MX-TAN','-MX-RAD'};
+% data = ft_selectdata(cfg,data);
+
+%% Source Analysis
+load([data_dir 'headmodel.mat']);
+load([data_dir 'sourcemodel3d.mat']);
+
+%% Prepare Leadfield
+
+disp('Preparing Leadfield');
+cfg = [];
+cfg.method='lcmv';
+cfg.channel = data.label;
+cfg.grid = sourcemodel3d;
+cfg.headmodel = headmodel;
+cfg.grad = rawData.grad;
+%cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)
+cfg.normalize       = 'yes' ; %Normalise Leadfield: 'yes' for beamformer
+%cfg.normalizeparam  = 1;
+lf = ft_prepare_leadfield(cfg);
+
+% make a figure of the single subject{i} headmodel, and grid positions
+figure; hold on;
+ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');
+alpha 0.5; camlight;
+%ft_plot_mesh(lf.pos(lf.inside,:));
+ft_plot_sens(rawData.grad, 'style', 'r*','orientation','true'); view([0,0]);
+%print('lf_headmodel_sens','-dpng','-r100');
+
+%% Compute covariance
+cfg                  = [];
+cfg.covariance       = 'yes';
+cfg.vartrllength     = 2;
+cfg.covariancewindow = [-0.3 0.3];
+avg                  = ft_timelockanalysis(cfg,data);
+
+% %Make a dummy variable with covariance matrices averaged
+% avg_combined        = avg_deviant;
+% avg_combined.cov    = (avg_deviant.cov+avg_predeviant.cov)./2;
+
+%% Source Analysis Proper (using LCMV)
+cfg                    = [];
+cfg.channel            = data.label;
+cfg.grad               = rawData.grad;
+cfg.method             = 'lcmv';
+cfg.grid               = lf;
+cfg.headmodel          = headmodel;
+cfg.lcmv.keepfilter    = 'yes';
+cfg.lcmv.fixedori      = 'yes';
+cfg.lcmv.projectnoise  = 'yes';
+cfg.lcmv.weightnorm    = 'nai';
+cfg.lcmv.lambda        = '5%';
+sourceall              = ft_sourceanalysis(cfg, avg);
+
+% Replace .pos field with template_grid.pos
+
+[t, r] = ft_version;
+
+load(fullfile(r,'template/sourcemodel/standard_sourcemodel3d5mm.mat'));
+template_grid = sourcemodel;
+clear sourcemodel
+
+sourceall.pos = template_grid.pos;
+
+% Remove cfg field to save memory
+sourceall = rmfield(sourceall,'cfg');
+
+addpath(genpath('/Users/rseymoue/Documents/Github/MQ_MEG_Scripts'));
+
+source_pow_post = get_source_pow(data,sourceall,[0.15 0.2]);
+source_pow_pre = get_source_pow(data,sourceall,[-0.2 -0.15]);
+
+cfg = [];
+cfg.operation = 'subtract';
+cfg.parameter = 'pow';
+source_R = ft_math(cfg,source_pow_post,source_pow_pre);
+
+cfg               = [];
+cfg.method        = 'ortho';
+cfg.funparameter  = 'pow';
+cfg.location = 'max';
+ft_sourceplot(cfg,source_R);
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+
+%% Interpolate onto SPM brain
+spm_brain = ft_read_mri(fullfile(r,'template/anatomy/single_subj_T1.nii'));       
+cfg              = [];
+cfg.voxelcoord   = 'no';
+cfg.parameter    = 'pow';
+cfg.interpmethod = 'nearest';
+sourceI  = ft_sourceinterpolate(cfg, source_R, spm_brain);
+
+% Plot
+cfg = [];
+cfg.funparameter = 'pow';
+cfg.location = 'max';
+ft_sourceplot(cfg,sourceI);
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+%saveas(gcf,'sourceI_new3.png'); drawnow;
+
+% 
+% %%
+% cfg = [];
+% cfg.method          = 'surface';
+% cfg.funparameter    = 'pow';
+% cfg.colorbar        = 'yes';
+% %cfg.funcolorlim     = [-5.1e-14 5.1e-14];
+% %cfg.maskparameter = 'mask';
+% %cfg.funcolorlim    = [0 20];
+% %cfg.downsample     = 6;
+% cfg.projmethod     = 'nearest';
+% cfg.surfinflated   = 'surface_inflated_both_caret.mat';
+% %cfg.surfdownsample = 10
+% %cfg.projthresh     = 0.6;
+% cfg.camlight       = 'no';
+% ft_sourceplot(cfg, sourceI);
+% try
+%     ft_hastoolbox('brewermap', 1);
+%     colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+% catch
+%     warning('default colormap used instead of red/blue one');
+% end
+% light ('Position',[-180 0 0])
+% light ('Position',[180 0 0])
+% material dull;
+% title('');
+% view([180 0]);
+% set(gca,'FontSize',14);
+% drawnow;
+% 
+% %% Do virtual electrode analysis
+% %%
+% % Now we compute nonlinear warping between MNI and
+% mri = ft_read_mri([data_dir 'mmsMQ0484_orig.img']);
+% mri.coordsys = 'neuromag';
+% 
+% cfg             = [];
+% cfg.template    = mri;
+% cfg.nonlinear   = 'yes';
+% norm            = ft_volumenormalise([],mri);
+% 
+% pos = [-28 -72 8];
+% 
+% % Now we warp the MNI coordinates using the nonlinear warping parameters
+% posback         = ft_warp_apply(norm.params,pos,'sn2individual');
+% % xyz positions in individual coordinates
+% pos_grid        = ft_warp_apply(pinv(norm.initial),posback);
+%     
+% %% Prepare Leadfield
+% cfg = [];
+% cfg.method='lcmv';
+% cfg.channel = data.label;
+% cfg.grid.pos = pos_grid;
+% cfg.grid.unit = 'mm';
+% cfg.headmodel = headmodel;
+% cfg.grad = rawData.grad;
+% %cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)
+% cfg.normalize       = 'yes' ; %Normalise Leadfield: 'yes' for beamformer
+% %cfg.normalizeparam  = 1;
+% lf_2 = ft_prepare_leadfield(cfg);
+% 
+% % make a figure of the single subject{i} headmodel, and grid positions
+% figure; hold on;
+% ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');
+% alpha 0.5; camlight;
+% ft_plot_mesh(lf_2.pos(lf_2.inside,:),'vertexsize',20,'vertexcolor','r');
+% ft_plot_sens(rawData.grad, 'style', 'r*'); view([0,0]);
+% 
+% 
+% cfg                    = [];
+% cfg.channel            = data.label;
+% cfg.grad               = rawData.grad;
+% cfg.method             = 'lcmv';
+% cfg.grid               = lf_2;
+% cfg.headmodel          = headmodel;
+% cfg.lcmv.keepfilter    = 'yes';
+% cfg.lcmv.fixedori      = 'yes';
+% cfg.lcmv.projectnoise  = 'yes';
+% %cfg.lcmv.weightnorm    = 'nai';
+% cfg.lcmv.lambda        = '5%';
+% sourceall              = ft_sourceanalysis(cfg, avg);
+% 
+% % Find filter from max point
+% filter = sourceall.avg.filter{1,1};
+% 
+% VE = [];
+% VE.label = {'max'};
+% VE.trialinfo = data.trialinfo;
+% VE.condition = data.condition;
+% for subs=1:(length(data.trialinfo))
+%     % note that this is the non-filtered "raw" data
+%     VE.time{subs}       = data.time{subs};
+%     VE.trial{subs}(1,:) = filter(1,:)*data.trial{subs}(:,:);
+% end
+% 
+% % Select data based on conditions
+% cfg                 = [];
+% cfg.trials          = contains(VE.condition,'Famous');
+% famous_faces        = ft_selectdata(cfg,VE);
+% cfg.trials          = contains(VE.condition,'Unfamiliar');
+% unfamiliar_faces    = ft_selectdata(cfg,VE);
+% cfg.trials          = contains(VE.condition,'Scrambled');
+% scrambled_faces     = ft_selectdata(cfg,VE);
+% 
+% 
+% % Append the face data together
+% faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);
+% 
+% % Perform timelockanalysis
+% cfg             = [];
+% avg_famous      = ft_timelockanalysis([],famous_faces);
+% avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);
+% avg_scrambled   = ft_timelockanalysis([],scrambled_faces);
+% avg_faces_all   = ft_timelockanalysis([],faces_all);
+% 
+% %% Plot each sensor in turn
+% cfg = [];
+% cfg.parameter = 'avg';
+% cfg.baseline = [-0.5 0];
+% cfg.showlegend    = 'yes';
+% cfg.linewidth = 2;
+% %cfg.ylim = [-250 250];
+% figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...
+%     avg_scrambled);
+% legend({'Famous';'Unfamiliar';'Scrambled'});
+% set(gca,'FontSize',20);
+% xlabel('Time (s)');
+% title('');
+% 
+% 
+
+##### SOURCE END #####
+--></body></html>
