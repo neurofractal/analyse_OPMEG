@@ -25,6 +25,7 @@ function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
 %   cfg.Neighwidth          = width (in Hz) of peaks to evaluate, e.g. 2;
 %   cfg.minPeakDistance     = minimum distance between peaks. minimum of 2 Neighwidth recommended.
 %   cfg.method              = 'leaveSlope' or 'removeGauss'
+%   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks independently or together.
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
@@ -55,7 +56,11 @@ while changePeaks
     noPeaks     = true;
     while noPeaks
         % Identify peaks based on prominence. Extract halfheight width.
-        [peakVal,peakFreq,halfHeightWidth]  = findpeaks(powMedLog,freq,'MinPeakProminence',minPeakProminence,'WidthReference','halfheight','MinPeakDistance',cfg.minPeakDistance);
+        if strcmp(cfg.independentPeaks,'yes')
+            [peakVal,peakFreq,halfHeightWidth]  = findpeaks(powMedLog,freq,'MinPeakProminence',minPeakProminence,'WidthReference','halfheight','MinPeakDistance',cfg.minPeakDistance);
+        elseif strcmp(cfg.independentPeaks,'no')
+            [peakVal,peakFreq,halfHeightWidth]  = findpeaks(powMedLog,freq,'MinPeakProminence',minPeakProminence,'WidthReference','halfheight');
+        end
         % Remove peaks outside foi.
         peaksToRemove           = (peakFreq < cfg.foi(1) | peakFreq > cfg.foi(2));
         peakVal(peaksToRemove)  = [];
@@ -155,193 +160,353 @@ end
 % Tidy up
 close(verificationPlot)
 clear tmp* *Tmp peakIdx peaksToRemove diffPeaks changePeaks ax
-% 
-% %% Checks from interp method still apply.
-% % preprocessing fails on channels that contain NaN
-% if any(isnan(timeSeries(:)))
-%   ft_warning('FieldTrip:dataContainsNaN', 'Time series data contains NaN values');
-% end
-% 
-% % error message if periodicity of the interference frequency doesn't match the DFT length 
-% % This error should never be able to happen because I have interpolated
-% % earlier
-% n = round(floor(nsamples .* peakFftFreq./samplingFreq) * samplingFreq./peakFftFreq);
-% if n ~= nsamples 
-%    ft_error('Spectrum interpolation requires that the data length fits complete cycles of the frequencies being interpolated, e.g., exact multiples of 20 ms for a 50 Hz line frequency (sampling rate of 1000 Hz).');
-% end
 
 %% Remove Gaussian component from amplitude in spectrum
 % Run the fft
 fftData = fft(timeSeries,nsamples,2); % calculate fft to obtain spectrum that will be interpolated
+avgData = median(abs(fftData),1);
 
-for peakIdx = 1:length(peakFftFreq)
-    % Find the indices for the frequencies of the peak.
-    threeStdDevFreqIndices  = nearest(fftFreq,threeStdDevFftFreqRange(1,peakIdx)):nearest(fftFreq,threeStdDevFftFreqRange(2,peakIdx));
-    neighbourFreqIndices    = nearest(fftFreq,neighbourFftFreqRange(1,peakIdx)):nearest(fftFreq,neighbourFftFreqRange(2,peakIdx));
-    
-    % Guesses for fit (all channels)
-    % Gauss Width
-    stdDevSamples = length(threeStdDevFreqIndices) / 6;
-    
-    % Define function for a Gaussian on a slope.
-    gaussWithSlope = @(A, x0, s, b, c, x)...
-        (A*exp(-2*((x-x0)/s).^2)) + (b*x) + c;
-    
-    % Define function for Gaussian (without slope).
-    gauss = @(A, x0, s, x)...
-        (A*exp(-2*((x-x0)/s).^2));
-    
-    slope = @(b, c, x)...
-        (b*x) + c;
-    
-    lorentzianWithSlope = @(A, x0, g, b, c, x)...
-        ((A * (g^2))./((g^2) + ((x - x0).^2))) + (b*x) + c;
-    
-    twoLortenzianWithSlope = @(A1, A2, x01, x02, g1, g2, b, c, x)...
-        ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2))) + (b*x) + c;
-    
-    lorentzian = @(A, x0, g, x)...
-        ((A * (g^2))./((g.^2) + ((x - x0).^2)));
 
-    twoLorentzian = @(A1, A2, x01, x02, g1, g2, x)...
-        ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2)));
-    
-    % Fit channels independently (may need to revise this)
-    for chanIdx = 1:length(fftData(:,1))
-        % Get the data being fit
-    	neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
-        threeStdDevData = log(abs(fftData(chanIdx,threeStdDevFreqIndices)));
-%         dataToFit   = sgolayfilt(dataToFit,10,21);
+switch cfg.independentPeaks
+    case 'yes'
+        for peakIdx = 1:length(peakFftFreq)
+            % Find constants for all channels from the channel avg first
+            
+            % Find the indices for the frequencies of the peak.
+            threeStdDevFreqIndices  = nearest(fftFreq,threeStdDevFftFreqRange(1,peakIdx)):nearest(fftFreq,threeStdDevFftFreqRange(2,peakIdx));
+            neighbourFreqIndices    = nearest(fftFreq,neighbourFftFreqRange(1,peakIdx)):nearest(fftFreq,neighbourFftFreqRange(2,peakIdx));
+
+            % Guesses for fit (all channels)
+            % Samples Width
+            widthSamples = length(threeStdDevFreqIndices) / 6; % Magic number...
+
+            
+            % Define function for Gaussian/Lorentzian with and without
+            % slopes.
+            gaussWithSlope = @(A, x0, s, b, c, x)...
+                (A*exp(-2*((x-x0)/s).^2)) + (b*x) + c;
+
+            gauss = @(A, x0, s, x)...
+                (A*exp(-2*((x-x0)/s).^2));
+
+            slope = @(b, c, x)...
+                (b*x) + c;
+
+            lorentzianWithSlope = @(A, x0, g, b, c, x)...
+                ((A * (g^2))./((g^2) + ((x - x0).^2))) + (b*x) + c;
+
+            lorentzian = @(A, x0, g, x)...
+                ((A * (g^2))./((g.^2) + ((x - x0).^2)));
+            
+            
+            % Get the data being fit
+            neighbourData   = log(abs(avgData(neighbourFreqIndices)));
+            threeStdDevData = log(abs(avgData(threeStdDevFreqIndices)));
+
+            % Guesses for fit (channel level)
+            % Floor
+            fitFloor    = mean(threeStdDevData,2);
+
+            % Guass peak
+            [peak,peakLoc]    = max(threeStdDevData,[],2);
+
+            % Gauss centre freq
+            centre = threeStdDevFreqIndices(peakLoc);
+
+            % Slope
+            slopeC       = (neighbourData(end) - neighbourData(1)) / (threeStdDevFreqIndices(end) - threeStdDevFreqIndices(1));
+
+            % Constant
+            constant    = neighbourData(1) - (slopeC *  neighbourFreqIndices(1));
+
+            switch cfg.method
+                case 'leaveSlopeMinusGauss'
+                    % Fit a gauss with slope to the data.
+                    fittedAvgModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
+                                                'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+
+                case 'removeGauss'
+                    % Fit a gauss with slope to the data.
+                    fittedAvgModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
+                                                'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+
+                case 'removeLorentzian'
+                    % Fit a Lorentzian with slope
+                    fittedAvgModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
+                        'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+
+                case 'leaveSlopeMinusLorentzian'
+                    % Fit a lortenzian with slope to the data.
+                    fittedAvgModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
+                        'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+            end
+            
+            % Redefine functions with constants for peak and width.
+            gaussWithSlopeC = @(A, b, c, x)...
+                (A*exp(-2*((x-fittedAvgModel.x0)/fittedAvgModel.s).^2)) + (b*x) + c;
+
+            gaussC = @(A, x)...
+                (A*exp(-2*((x-fittedAvgModel.x0)/fittedAvgModel.s).^2));
+
+            lorentzianWithSlopeC = @(A, b, c, x)...
+                ((A * (fittedAvgModel.g^2))./((fittedAvgModel.g^2) + ((x - fittedAvgModel.x0).^2))) + (b*x) + c;
+
+            lorentzianC = @(A, x)...
+                ((A * (fittedAvgModel.g^2))./((fittedAvgModel.g.^2) + ((x - fittedAvgModel.x0).^2)));
+            
+            % Fit channels independently (may need to revise this)
+            for chanIdx = 1:length(fftData(:,1))
+                % Get the data being fit.
+                neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
+                threeStdDevData = log(abs(fftData(chanIdx,threeStdDevFreqIndices)));
+
+                switch cfg.method
+                    case 'leaveSlopeMinusGauss'
+                        % Fit a gauss with slope to the data.
+                        fittedModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlopeC,...
+                                                    'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
+
+                        % Get the width of 3 std.dev of the fitted Gauss
+                        tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (3 * fittedAvgModel.s));
+                        tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (3 * fittedAvgModel.s));
+                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+                        % Get just the slope
+                        replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
+
+                    case 'removeGauss'
+                        % Fit a gauss with slope to the data.
+                        fittedModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlopeC,...
+                                                    'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
+
+                        % Get the width of 3 std.dev of the fitted Gauss
+                        tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (3 * fittedAvgModel.s));
+                        tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (3 * fittedAvgModel.s));
+                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+                        % Find the Gauss component.
+                        onlyGauss               = gaussC(fittedModel.A, indicesToReplace);
+
+                        % Remove the Gauss from the original data.
+                        replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyGauss;
+
+                    case 'removeLorentzian'
+                        % Fit a Lorentzian with slope
+                        fittedModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlopeC,...
+                            'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
+
+                        % Get the width of 6 gamma of fitted lorentzian.
+                        tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (6 * abs(fittedAvgModel.g)));
+                        tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (6 * abs(fittedAvgModel.g)));
+
+                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+                        if length(indicesToReplace) > length(neighbourData)
+                            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
+                        end
+
+                        % Get the lorentzian component.
+                        onlyLorentz             = lorentzianC(fittedModel.A, indicesToReplace);
+
+                        % Remove it from the original data.
+                        replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
+
+                    case 'leaveSlopeMinusLorentzian'
+                        % Fit a lortenzian with slope to the data.
+                        fittedModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlopeC,...
+                            'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
+
+                        % Get the width of 3 std.dev of the fitted Gauss
+                        tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (6 * abs(fittedAvgModel.g)));
+                        tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (6 * abs(fittedAvgModel.g)));
+                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+                        % Get just the slope
+                        replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
+                end
+                
+                % debug plots
+                subplot(2,1,1);
+                hold on
+                plot(neighbourFreqIndices, neighbourData)
+                plot(fittedModel)
+                hold off
+                subplot(2,1,2);
+                hold on
+                plot(indicesToReplace,replacementData)
+                plot(fittedModel)
+                hold off
+                % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
+                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
+            end
+        end
+    case 'no'
+        % Find the total width indices for all peaks together
+        maxThreeStdDevFreqIndices   = nearest(fftFreq,min(threeStdDevFftFreqRange,[],'all')):nearest(fftFreq,max(threeStdDevFftFreqRange,[],'all'));
+        neighbourFreqIndices        = nearest(fftFreq,min(neighbourFftFreqRange,[],'all')):nearest(fftFreq,max(neighbourFftFreqRange,[],'all'));
         
+        % Find constants from the avg data.
+        maxThreeStdDevData      = log(abs(avgData(maxThreeStdDevFreqIndices)));
+        neighbourData           = log(abs(avgData(neighbourFreqIndices)));
+
         % Guesses for fit (channel level)
-        % Floor
-        fitFloor    = mean(threeStdDevData,2);
-
-        % Guass peak
-        [peak,peakLoc]    = max(threeStdDevData,[],2);
-        
-        % Gauss centre freq
-        centre = threeStdDevFreqIndices(peakLoc);
-
         % Slope
-        slopeC       = (neighbourData(end) - neighbourData(1)) / (threeStdDevFreqIndices(end) - threeStdDevFreqIndices(1));
+        slopeC       = (neighbourData(end) - neighbourData(1)) / (maxThreeStdDevFreqIndices(end) - maxThreeStdDevFreqIndices(1));
 
         % Constant
         constant    = neighbourData(1) - (slopeC *  neighbourFreqIndices(1));
+
+        A           = zeros(size(peakFreq));
+        x0          = zeros(size(peakFreq));
+        g           = zeros(size(peakFreq));
+        b           = slopeC;
+        c           = constant;
+        for peakIdx = 1:length(peakFreq)
+            % Find indices for the peak.
+            threeStdDevFreqIndices  = nearest(fftFreq,threeStdDevFftFreqRange(1,peakIdx)):nearest(fftFreq,threeStdDevFftFreqRange(2,peakIdx));
+%             threeStdDevData         = log(abs(avgData(threeStdDevFreqIndices)));
+            threeStdDevData         = abs(avgData(threeStdDevFreqIndices));
+            
+            % Guesses for fit (peak level)
+            % Floor
+            fitFloor        = mean(threeStdDevData,2);
+
+            % Peak
+            peak            = threeStdDevData(round(length(threeStdDevData)/2));
+
+            % Centre freq
+            centre          = threeStdDevFreqIndices(round(length(threeStdDevFreqIndices)/2));
+
+            % Guesses for fit (all channels)
+            % Gamma
+            widthSamples    = length(threeStdDevFreqIndices) / 6;
+
+            % Guesses for fit (channel level)
+            A(peakIdx)      = peak - fitFloor;
+            x0(peakIdx)     = centre;
+            g(peakIdx)      = widthSamples;
+        end
+
+        if length(peakFreq) == 2
+            twoLorentzianWithSlope = @(A1, x01, g1, A2, x02, g2, b, c, x)...
+                    ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2))) + (b*x) + c;
+
+            twoLorentzian = @(A1, x01, g1, A2, x02, g2, x)...
+                    ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2)));
+
+            % Start values for gamma have been set to 1. The guess is not
+            % well worked at the moment. 
+            fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlope,...
+                                'StartPoint', [A(1), x0(1), 1, A(2), x0(2), 1, b, c]);
+
+            % Get the width of fitted lorentzians.
+            x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
+            x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
+            gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
+            tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax));
+            tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
+            indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+            if length(indicesToReplace) > length(neighbourData)
+                ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
+            end
+
+        elseif length(peakFreq) == 3
+            threeLorentzianWithSlope = @(A1, x01, g1, A2, x02, g2, A3, x03, g3, b, c, x)...
+                    ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2))) + ((A3 * (g3^2))./((g3^2) + ((x - x03).^2))) + (b*x) + c;
+
+            threeLorentzian = @(A1, x01, g1, A2, x02, g2, A3, x03, g3, x)...
+                    ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2))) + ((A3 * (g3^2))./((g3^2) + ((x - x03).^2)));
+
+            fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlope,...
+                                'StartPoint', [A(1), x0(1), 1, A(2), x0(2), 1, A(3), x0(3), 1, b, c]);
+            
+            % Get the width of fitted lorentzians.
+            x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
+            x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
+            gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2,fittedAvgModel.g3]));
+            tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax));
+            tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
+        end
+
         
-        switch cfg.method
-            case 'leaveSlopeMinusGauss'
-                % Fit a gauss with slope to the data.
-                fittedModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
-                                            'StartPoint', [(peak - fitFloor), centre, stdDevSamples, slopeC, constant]);
+        % Now apply per channel with some constants from the avg.
+        for chanIdx = 1:length(fftData(:,1))
+            maxThreeStdDevData = log(abs(fftData(chanIdx,maxThreeStdDevFreqIndices)));
+            neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
+
+            if length(peakFreq) == 2
+                twoLorentzianWithSlopeC = @(A1, A2, b, c, x)...
+                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + (b*x) + c;
+
+                twoLorentzianC = @(A1, A2, x)...
+                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2)));
+
+                fittedModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlopeC,...
+                                    'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c]);
+                                
+                % Get the width of fitted lorentzians.
+                x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
+                x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
+                gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
+                tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax));
+                tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
                 
-                % Get the width of 3 std.dev of the fitted Gauss
-                tmpStartIdx             = nearest(neighbourFreqIndices,fittedModel.x0 - (3 * fittedModel.s));
-                tmpEndIdx               = nearest(neighbourFreqIndices,fittedModel.x0 + (3 * fittedModel.s));
-                indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                
-                % Get just the slope
-                replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
-                
-                
-            case 'removeGauss'
-                % Fit a gauss with slope to the data.
-                fittedModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
-                                            'StartPoint', [(peak - fitFloor), centre, stdDevSamples, slopeC, constant]);
-                
-                % Get the width of 3 std.dev of the fitted Gauss
-                tmpStartIdx             = nearest(neighbourFreqIndices,fittedModel.x0 - (3 * fittedModel.s));
-                tmpEndIdx               = nearest(neighbourFreqIndices,fittedModel.x0 + (3 * fittedModel.s));
                 indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
 
-                % Find the Gauss component.
-                onlyGauss               = gauss(fittedModel.A,fittedModel.x0, fittedModel.s, indicesToReplace);
-                
-                % Remove the Gauss from the original data.
-                replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyGauss;
-                
-                
-                
-            case 'removeLorentzian'
-                % Fit a Lorentzian with slope
-                fittedModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
-                    'StartPoint', [(peak - fitFloor), centre, stdDevSamples, slopeC, constant]);
-        
-                % Get the width of 6 gamma of fitted lorentzian.
-                tmpStartIdx             = nearest(neighbourFreqIndices,fittedModel.x0 - (6 * fittedModel.g));
-                tmpEndIdx               = nearest(neighbourFreqIndices,fittedModel.x0 + (6 * fittedModel.g));
-
-                indicesToReplace  = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                
                 if length(indicesToReplace) > length(neighbourData)
                     ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
                 end
-                
+
                 % Get the lorentzian component.
-                onlyLorentz = lorentzian(fittedModel.A, fittedModel.x0, fittedModel.g, indicesToReplace);
+                onlyLorentz             = twoLorentzianC(fittedModel.A1, fittedModel.A2, indicesToReplace);
 
                 % Remove it from the original data.
-                replacementData        = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
+                replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
+
+            elseif length(peakFreq) == 3
+                threeLorentzianWithSlopeC = @(A1, A2, A3, b, c, x)...
+                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + ((A3 * (fittedAvgModel.g3^2))./((fittedAvgModel.g3^2) + ((x - fittedAvgModel.x03).^2))) + (b*x) + c;
                 
-%                 fitted2     = lorentzianWithSlope(fittedLorentzianWithSlope.A, fittedLorentzianWithSlope.x0, fittedLorentzianWithSlope.g,fittedLorentzianWithSlope.b,fittedLorentzianWithSlope.c, neighbourFreqIndices);
-            case 'leaveSlopeMinusLorentzian'
-                % Fit a lortenzian with slope to the data.
-                fittedModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
-                    'StartPoint', [(peak - fitFloor), centre, stdDevSamples, slopeC, constant]);
-               
-                % Get the width of 3 std.dev of the fitted Gauss
-                tmpStartIdx             = nearest(neighbourFreqIndices,fittedModel.x0 - (6 * fittedModel.g));
-                tmpEndIdx               = nearest(neighbourFreqIndices,fittedModel.x0 + (6 * fittedModel.g));
+                threeLorentzianC = @(A1, A2, A3, x)...
+                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + ((A3 * (fittedAvgModel.g3^2))./((fittedAvgModel.g3^2) + ((x - fittedAvgModel.x03).^2)));
+
+                fittedModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlopeC,...
+                                    'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c]);
+                
+                % Get the width of fitted lorentzians.
+                x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
+                x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
+                gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2,fittedAvgModel.g3]));
+                tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax));
+                tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
+                
                 indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                
-                % Get just the slope
-                replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
+
+                if length(indicesToReplace) > length(neighbourData)
+                    ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
+                end
+
+                % Get the lorentzian component.
+                onlyLorentz             = threeLorentzianC(fittedModel.A1, fittedModel.A2, fittedModel.A3, indicesToReplace);
+
+                % Remove it from the original data.
+                replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
+            end
+            % debug plots
+            subplot(2,1,1);
+            hold on
+            plot(neighbourFreqIndices, neighbourData)
+            plot(fittedModel)
+            hold off
+            subplot(2,1,2);
+            hold on
+            plot(indicesToReplace,replacementData)
+            plot(fittedModel)
+            hold off
+            % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
+            fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
         end
-        
-        % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
-        fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
-
-
-        
-%         fittedTwoLortenzianWithSlope = fit(neighbourFreqIndices', neighbourData', twoLortenzianWithSlope,...
-%             'StartPoint', [(peak - fitFloor), (16.87 - fitFloor), centre, 112671, stdDevSamples, stdDevSamples/3, slopeC, constant]);
-        
-        
-       
-        
-       
-        
-        % Debugging:
-        % Use the output parameters to find the fit
-
-        
-%         fitted3     = twoLortenzianWithSlope(fittedTwoLortenzianWithSlope.A1, fittedTwoLortenzianWithSlope.A2,fittedTwoLortenzianWithSlope.x01, fittedTwoLortenzianWithSlope.x02,fittedTwoLortenzianWithSlope.g1,fittedTwoLortenzianWithSlope.g2,fittedTwoLortenzianWithSlope.b,fittedTwoLortenzianWithSlope.c,neighbourFreqIndices);
-        % Best guess (something is wrong with the guess, but it is okay for
-        % now).
-%         bestGuess   = gaussWithSlope((peak - fitFloor), centre, stdDevSamples, slopeC, constant, neighbourFreqIndices);
-        
-%         
-%         onlyTwoLorentz = twoLorentzian(fittedTwoLortenzianWithSlope.A1, fittedTwoLortenzianWithSlope.A2, fittedTwoLortenzianWithSlope.x01, fittedTwoLortenzianWithSlope.x02, fittedTwoLortenzianWithSlope.g1, fittedTwoLortenzianWithSlope.g2, neighbourFreqIndices);
-% 
-%         
-%         
-%         dataMinusTwoLorentz = neighbourData - onlyTwoLorentz;
-% 
-%         % Plots
-%         hold on
-%         plot(neighbourFreqIndices,bestGuess);
-%         plot(neighbourFreqIndices,dataMinusGauss);
-%         plot(neighbourFreqIndices,fitted);
-%         plot(neighbourFreqIndices,fitted2);
-%         plot(fittedWidthFreqIndices,onlySlope);
-%         plot(neighbourFreqIndices,dataMinusLorentz);
-%         plot(neighbourFreqIndices,fitted3);
-%         plot(neighbourFreqIndices,dataMinusTwoLorentz);
-
-%         close all
-        
-        
-    end
 end
 
 % complex fourier coefficients are transformed back into time domin, fourier coefficients are treated as conjugate 'symmetric'
