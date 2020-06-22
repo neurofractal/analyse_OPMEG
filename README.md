@@ -12,4 +12,4 @@ Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
 ### Example Analysis Tutorials:
 - [Data Denoising Tutorial](./test_scripts/denoise_tutorial.ipynb) *work in progress*
 - [Finger Abduction (Beta Desync)](./test_scripts/test_motor_data.ipynb)
-- [M170 Faces](./test_scripts/denoise_faces.ipynb)
+- [M170 Faces](./test_scripts/html/M170_pipeline.html)
