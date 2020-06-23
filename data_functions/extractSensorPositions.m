@@ -10,8 +10,10 @@ function sensorInfo = extractSensorPositions(cfg)
 % cfg.slotori       = 'rad' or 'tan', the sensor-space radial to the head.
 % cfg.plot          = 'yes' or 'no'
 % cfg.correct       = 'yes' or 'no' : do you want to manually flip the tan ori?
-% cfg.scalp         = path to STL file of scalp in the same coordinate system.
+% cfg.scalp         = 'string', path to STL file of scalp in the same coordinate system.
 % cfg.outputfolder  = 'string', filename with directory for output.
+% cfg.sensortype    = 'old' or 'new', where old is the plain rectangle with
+%                       cone and new is the accurate model of the sensor.
 % 
 % Output is a table of sensor info. 'rad' and 'tan' are given their own
 % channels, rather than combining as Ox_rad, or similar. This should make
@@ -74,7 +76,7 @@ radOri              = zeros(size(sensorListing, 1), 3);
 tanOri              = zeros(size(sensorListing, 1), 3);
 sensorFaces         = cell(size(sensorListing, 1), 3);
 sensorVerts         = cell(size(sensorListing, 1), 3);
-filename        = cell(size(sensorListing, 1), 1);
+filename            = cell(size(sensorListing, 1), 1);
 
 for sensorIdx = 1:size(sensorListing, 1)
     
@@ -101,135 +103,281 @@ for sensorIdx = 1:size(sensorListing, 1)
         redFaces(faceRepeatIdx) = redVertIdx; %#ok<FNDSB>
     end
     
-    % We can find the corners by finding the points furthest from the mean
-    % of all vertices. Note, this may not be the centre.
-    meanVert        = mean(redVerts);
-    meanVertDist    = zeros(length(redVerts(:,1)),1);
-    for pointIdx = 1:length(redVerts(:,1))
-        meanVertDist(pointIdx)  = pdist([meanVert;redVerts(pointIdx,1:3)]);
-    end
     
-    % Just the 8 greatest distances.
-    [~,distRank]        = sort(meanVertDist);
-    cornerIdx           = distRank(end-7:end);
-    cornerVerts         = redVerts(cornerIdx,1:3);
-    
-    % Up to here, everything works. But need a different way of finding the
-    % groups of sensors (top/bottom).
-    
-    % Find the distance between all the corner combinations.
-    combinations        = nchoosek(1:length(cornerVerts(:,1)),2);
-    cornerDist          = zeros(length(combinations(:,1)),1);
-    for combIdx = 1:length(combinations(:,1))
-        cornerDist(combIdx,1)   = pdist([cornerVerts(combinations(combIdx,1),:);cornerVerts(combinations(combIdx,2),:)]);
-    end
-    
-    % Round it out and sort it out.
-    cornerDist          = round(cornerDist,2);
-    uniqueCornerDists   = sort(unique(cornerDist));
-    
-    % Remove the hypotenusesese.
-    combinations    = nchoosek(1:length(uniqueCornerDists),2);
-    hypoIdx       = zeros(length(uniqueCornerDists),length(combinations(:,1)));
-    for combIdx = 1:length(combinations(:,1))
-        RMS             = sqrt(uniqueCornerDists(combinations(combIdx,1))^2 + uniqueCornerDists(combinations(combIdx,2))^2);
-        RMS             = round(RMS,2);
-        [~,hypoIdx(:,combIdx)]    = ismember(uniqueCornerDists,RMS);
-    end
-    hypoIdx     = (sum(hypoIdx,2)>0);
-    
-    % The remaining distances are along the outside edges.
-    edgeDists   = uniqueCornerDists(~hypoIdx);
-    
-    % If the slot rad and head rad are aligned than it is short edge down
-    % so remove the longest edge. Otherwise it is long edge, so remove the
-    % shortest edge.
-    if strcmp(cfg.slotori,'rad')
-        edgeDists(edgeDists == max(edgeDists)) = [];
-    elseif strcmp(cfg.slotori,'tan')
-        edgeDists(edgeDists == min(edgeDists)) = [];
-    else
-        error('Specify either cfg.slotori = rad or tan')
-    end
-    
-    % Take a vertex and find the connected vertices. 
-    firstGroupCornerVerts   = zeros(length(cornerVerts(:,1))/2,length(cornerVerts(1,:)));
-    remCornerVerts          = cornerVerts;
-    nextDist                = 1;
-    for cornerIdx = 1:length(firstGroupCornerVerts(:,1))
-        if cornerIdx == 1
-            firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(cornerIdx,:);
-            remCornerVerts(1,:)                 = [];
-        else
-            dist        = zeros(length(remCornerVerts(:,1)),1);
-            for remIdx = 1:length(remCornerVerts(:,1))
-                dist(remIdx,1)  = pdist([firstGroupCornerVerts(cornerIdx-1,:);remCornerVerts(remIdx,:)]);
-            end
-            dist    = round(dist,2);
-            % Long or short edge this time?
-            if nextDist == 1
-                nextDist = 2;
-            elseif nextDist == 2
-                nextDist = 1;
+    switch cfg.sensortype
+        case 'old'
+            % We can find the corners by finding the points furthest from the mean
+            % of all vertices. Note, this may not be the centre.
+            meanVert        = mean(redVerts);
+            meanVertDist    = zeros(length(redVerts(:,1)),1);
+            for pointIdx = 1:length(redVerts(:,1))
+                meanVertDist(pointIdx)  = pdist([meanVert;redVerts(pointIdx,1:3)]);
             end
 
-            nextCornerIdx                       = (dist == edgeDists(nextDist));
-            firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(nextCornerIdx,:);
-            remCornerVerts(nextCornerIdx,:)         = [];
-        end
-    end
-    
-    % The remaining corner verts are the second group.
-    secondGroupCornerVerts  = remCornerVerts;
-    
-    % Take the mean position of each grouping.
-    firstGroupCentreVert    = mean(firstGroupCornerVerts,1);
-    secondGroupCentreVert   = mean(secondGroupCornerVerts,1);
-    
-    % Which is closer to the centre of the head?
-    firstGroupCentreDist    = pdist([firstGroupCentreVert;headCentreVert]);
-    secondGroupCentreDist   = pdist([secondGroupCentreVert;headCentreVert]);
-    
-    if (firstGroupCentreDist < secondGroupCentreDist)
-        bottomCornerVerts   = firstGroupCornerVerts;
-        topCornerVerts      = secondGroupCornerVerts;
-    elseif (firstGroupCentreDist > secondGroupCentreDist)
-        bottomCornerVerts   = secondGroupCornerVerts;
-        topCornerVerts      = firstGroupCornerVerts;
-    end   
+            % Just the 8 greatest distances.
+            [~,distRank]        = sort(meanVertDist);
+            cornerIdx           = distRank(end-7:end);
+            cornerVerts         = redVerts(cornerIdx,1:3);
 
-    % Find the distances between the top corner points.
-    combinations = nchoosek(1:4, 2);
-    topCornerDistance    = zeros(length(combinations),1);
-    bottomCornerDistance = zeros(length(combinations),1);
-    for combIdx = 1:length(combinations)
-        topCornerDistance(combIdx)      = pdist(vertcat(topCornerVerts(combinations(combIdx,1),:),topCornerVerts(combinations(combIdx,2),:)));
-        bottomCornerDistance(combIdx)   = pdist(vertcat(bottomCornerVerts(combinations(combIdx,1),:),bottomCornerVerts(combinations(combIdx,2),:)));
-    end
-    
-    % Longest distance goes across the middle.
-    [~,topMiddleComb]           = max(topCornerDistance);
-    [~,bottomMiddleComb]        = max(bottomCornerDistance);
+            % Up to here, everything works. But need a different way of finding the
+            % groups of sensors (top/bottom).
 
-    % Shortest distance goes along the ends.
-    [~, bottomEndComb]          = min(bottomCornerDistance);
-    
-    % Find the centre point. Average position of the furthest apart pairs. 
-    topMiddlePoint              = mean(vertcat(topCornerVerts(combinations(topMiddleComb,1),:),topCornerVerts(combinations(topMiddleComb,2),:)));
-    bottomMiddlePoint           = mean(vertcat(bottomCornerVerts(combinations(bottomMiddleComb,1),:),bottomCornerVerts(combinations(bottomMiddleComb,2),:)));
-    centrePoint(sensorIdx,1:3)  = mean(vertcat(topMiddlePoint,bottomMiddlePoint));   
-    
-    bottomEndPoint              = mean(vertcat(bottomCornerVerts(combinations(bottomEndComb,1),:),bottomCornerVerts(combinations(bottomEndComb,2),:)));
-    
-    % Very confusing, but if the sensors are in 'tan' orientation slots,
-    % then that means the tan of the sensor is aligned with the rad of the
-    % head. Need to avvound for that. 
-    if strcmp(cfg.slotori,'rad')
-        radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
-        tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
-    elseif strcmp(cfg.slotori,'tan')
-        radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
-        tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+            % Find the distance between all the corner combinations.
+            combinations        = nchoosek(1:length(cornerVerts(:,1)),2);
+            cornerDist          = zeros(length(combinations(:,1)),1);
+            for combIdx = 1:length(combinations(:,1))
+                cornerDist(combIdx,1)   = pdist([cornerVerts(combinations(combIdx,1),:);cornerVerts(combinations(combIdx,2),:)]);
+            end
+
+            % Round it out and sort it out.
+            cornerDist          = round(cornerDist,2);
+            uniqueCornerDists   = sort(unique(cornerDist));
+
+            % Remove the hypotenuses.
+            combinations    = nchoosek(1:length(uniqueCornerDists),2);
+            hypoIdx       = zeros(length(uniqueCornerDists),length(combinations(:,1)));
+            for combIdx = 1:length(combinations(:,1))
+                RMS             = sqrt(uniqueCornerDists(combinations(combIdx,1))^2 + uniqueCornerDists(combinations(combIdx,2))^2);
+                RMS             = round(RMS,2);
+                [~,hypoIdx(:,combIdx)]    = ismember(uniqueCornerDists,RMS);
+            end
+            hypoIdx     = (sum(hypoIdx,2)>0);
+
+            % The remaining distances are along the outside edges.
+            edgeDists   = uniqueCornerDists(~hypoIdx);
+
+            % If the slot rad and head rad are aligned than it is short edge down
+            % so remove the longest edge. Otherwise it is long edge, so remove the
+            % shortest edge.
+            if strcmp(cfg.slotori,'rad')
+                edgeDists(edgeDists == max(edgeDists)) = [];
+            elseif strcmp(cfg.slotori,'tan')
+                edgeDists(edgeDists == min(edgeDists)) = [];
+            else
+                error('Specify either cfg.slotori = rad or tan')
+            end
+
+            % Take a vertex and find the connected vertices. 
+            firstGroupCornerVerts   = zeros(length(cornerVerts(:,1))/2,length(cornerVerts(1,:)));
+            remCornerVerts          = cornerVerts;
+            nextDist                = 1;
+            for cornerIdx = 1:length(firstGroupCornerVerts(:,1))
+                if cornerIdx == 1
+                    firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(cornerIdx,:);
+                    remCornerVerts(1,:)                 = [];
+                else
+                    dist        = zeros(length(remCornerVerts(:,1)),1);
+                    for remIdx = 1:length(remCornerVerts(:,1))
+                        dist(remIdx,1)  = pdist([firstGroupCornerVerts(cornerIdx-1,:);remCornerVerts(remIdx,:)]);
+                    end
+                    dist    = round(dist,2);
+                    % Long or short edge this time?
+                    if nextDist == 1
+                        nextDist = 2;
+                    elseif nextDist == 2
+                        nextDist = 1;
+                    end
+
+                    nextCornerIdx                       = (dist == edgeDists(nextDist));
+                    firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(nextCornerIdx,:);
+                    remCornerVerts(nextCornerIdx,:)         = [];
+                end
+            end
+
+            % The remaining corner verts are the second group.
+            secondGroupCornerVerts  = remCornerVerts;
+
+            % Take the mean position of each grouping.
+            firstGroupCentreVert    = mean(firstGroupCornerVerts,1);
+            secondGroupCentreVert   = mean(secondGroupCornerVerts,1);
+
+            % Which is closer to the centre of the head?
+            firstGroupCentreDist    = pdist([firstGroupCentreVert;headCentreVert]);
+            secondGroupCentreDist   = pdist([secondGroupCentreVert;headCentreVert]);
+
+            if (firstGroupCentreDist < secondGroupCentreDist)
+                bottomCornerVerts   = firstGroupCornerVerts;
+                topCornerVerts      = secondGroupCornerVerts;
+            elseif (firstGroupCentreDist > secondGroupCentreDist)
+                bottomCornerVerts   = secondGroupCornerVerts;
+                topCornerVerts      = firstGroupCornerVerts;
+            end   
+
+            % Find the distances between the top corner points.
+            combinations = nchoosek(1:4, 2);
+            topCornerDistance    = zeros(length(combinations),1);
+            bottomCornerDistance = zeros(length(combinations),1);
+            for combIdx = 1:length(combinations)
+                topCornerDistance(combIdx)      = pdist(vertcat(topCornerVerts(combinations(combIdx,1),:),topCornerVerts(combinations(combIdx,2),:)));
+                bottomCornerDistance(combIdx)   = pdist(vertcat(bottomCornerVerts(combinations(combIdx,1),:),bottomCornerVerts(combinations(combIdx,2),:)));
+            end
+
+            % Longest distance goes across the middle.
+            [~,topMiddleComb]           = max(topCornerDistance);
+            [~,bottomMiddleComb]        = max(bottomCornerDistance);
+
+            % Shortest distance goes along the ends.
+            [~, bottomEndComb]          = min(bottomCornerDistance);
+
+            % Find the centre point. Average position of the furthest apart pairs. 
+            topMiddlePoint              = mean(vertcat(topCornerVerts(combinations(topMiddleComb,1),:),topCornerVerts(combinations(topMiddleComb,2),:)));
+            bottomMiddlePoint           = mean(vertcat(bottomCornerVerts(combinations(bottomMiddleComb,1),:),bottomCornerVerts(combinations(bottomMiddleComb,2),:)));
+            centrePoint(sensorIdx,1:3)  = mean(vertcat(topMiddlePoint,bottomMiddlePoint));   
+
+            bottomEndPoint              = mean(vertcat(bottomCornerVerts(combinations(bottomEndComb,1),:),bottomCornerVerts(combinations(bottomEndComb,2),:)));
+            
+            % Very confusing, but if the sensors are in 'tan' orientation slots,
+            % then that means the tan of the sensor is aligned with the rad of the
+            % head. Need to avvound for that. 
+            if strcmp(cfg.slotori,'rad')
+                radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
+                tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+            elseif strcmp(cfg.slotori,'tan')
+                radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
+                tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
+            end
+
+        
+        case 'new'
+            % There is a cone on the top and bottom of the sensor. 
+            % The cones belong to the most faces.
+            facesList                   = reshape(redFaces,[numel(redFaces),1]);
+            [n,bin]                     = hist(facesList,unique(facesList));
+            [~,idx]                     = sort(-n);
+            count                       = n(idx); % count instances
+            value                       = bin(idx); % corresponding values
+            
+            % Fortunately, the most common one is the bottom and second
+            % most is the top.
+            bottomPoint                 = [redVerts(value(1),1),redVerts(value(1),2),redVerts(value(1),3)];
+            topPoint                    = [redVerts(value(2),1),redVerts(value(2),2),redVerts(value(2),3)];
+            centrePoint(sensorIdx,1:3)  = mean([bottomPoint; topPoint]);
+%             
+%             % Debug plotting
+%             hold on
+%             patch('Faces',redFaces,'Vertices',redVerts,'FaceColor','red');
+%             scatter3(bottomPoint(1),bottomPoint(2),bottomPoint(3));
+%             scatter3(topPoint(1),topPoint(2),topPoint(3));
+%             scatter3(centrePoint(1),centrePoint(2),centrePoint(3));
+%             hold off
+            
+            % The shape has internal vertices but we need the outer 
+            % boundary.
+            boundFaces              = convhull(redVerts,'simplify',true);            
+%             
+%             % Debug plots.
+%             hold on
+%             patch('Faces',boundFaces,'Vertices',redVerts,'FaceColor','red');
+%             scatter3(redVerts(:,1),redVerts(:,2),redVerts(:,3));
+%             
+            % Remove unused vertices.
+            uniqueBoundFaces        = unique(boundFaces);
+            boundVerts              = [];
+            newBoundFaces           = zeros(size(boundFaces));
+            boundVerts              = zeros(length(uniqueBoundFaces),3);
+            
+            for vertIdxIdx = 1:length(uniqueBoundFaces)
+                boundVerts(vertIdxIdx,1:3) = redVerts(uniqueBoundFaces(vertIdxIdx),1:3);
+                
+                % Replace all references to the redVerts idx with the
+                % boundVerts idx. 
+                [xIdx, yIdx] = find(boundFaces == uniqueBoundFaces(vertIdxIdx));
+                for ii = 1:length(xIdx)
+                    newBoundFaces(xIdx(ii),yIdx(ii)) = vertIdxIdx;
+                end
+            end
+            
+%             % debug plot
+%             patch('Faces',newBoundFaces,'Vertices',boundVerts,'FaceColor','red');
+
+            % Fit cuboid to the boundary points.
+            [simpleVerts, cuboidParameters, ~, ~] = CuboidRANSAC(boundVerts);   
+            
+            simpleFaces     = convhull(simpleVerts,'simplify',true);
+            
+            % Take the simple cuboid dimensions for later
+            edgeDists       = round(cuboidParameters(4:6),4)';
+            
+%             % debug plot
+%             hold on
+%             patch('Faces',simpleFaces,'Vertices',simpleVerts,'FaceColor','red');
+%             scatter3(redVerts(:,1),redVerts(:,2),redVerts(:,3));
+            
+
+
+            % Find groups of the long sides.
+            longestSide             = max(edgeDists);
+            edgeDists(edgeDists == longestSide) = [];
+
+
+            % Take a vertex and find the connected vertices. 
+            firstGroupCornerVerts   = zeros(length(simpleVerts(:,1))/2,length(simpleVerts(1,:)));
+            remCornerVerts          = simpleVerts;
+            nextDist                = 1;
+            
+            for cornerIdx = 1:length(firstGroupCornerVerts(:,1))
+                if cornerIdx == 1
+                    firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(cornerIdx,:);
+                    remCornerVerts(1,:)                 = [];
+                else
+                    dist        = zeros(length(remCornerVerts(:,1)),1);
+                    for remIdx = 1:length(remCornerVerts(:,1))
+                        dist(remIdx,1)  = pdist([firstGroupCornerVerts(cornerIdx-1,:);remCornerVerts(remIdx,:)]);
+                    end
+                    dist    = round(dist,4);
+                    % Long or short edge this time?
+                    if nextDist == 1
+                        nextDist = 2;
+                    elseif nextDist == 2
+                        nextDist = 1;
+                    end
+
+                    nextCornerIdx                       = (dist == edgeDists(nextDist));
+                    firstGroupCornerVerts(cornerIdx,:)  = remCornerVerts(nextCornerIdx,:);
+                    remCornerVerts(nextCornerIdx,:)         = [];
+                end
+            end
+            
+            % The remaining corner verts are the second group.
+            secondGroupCornerVerts  = remCornerVerts;
+            
+%             % Debug plot
+%             hold on
+%             scatter3(firstGroupCornerVerts(:,1),firstGroupCornerVerts(:,2),firstGroupCornerVerts(:,3));
+%             scatter3(secondGroupCornerVerts(:,1),secondGroupCornerVerts(:,2),secondGroupCornerVerts(:,3));
+%             patch('Faces',redFaces,'Vertices',redVerts,'FaceColor','red');
+            
+            % Take the mean position of each grouping.
+            firstGroupCentreVert    = mean(firstGroupCornerVerts,1);
+            secondGroupCentreVert   = mean(secondGroupCornerVerts,1);
+
+            % Which is closer to the centre of the sensor?
+            firstGroupCentreDist    = pdist([firstGroupCentreVert;centrePoint(sensorIdx,1:3)]);
+            secondGroupCentreDist   = pdist([secondGroupCentreVert;centrePoint(sensorIdx,1:3)]);
+
+            if (firstGroupCentreDist < secondGroupCentreDist)
+                flatEndVerts        = firstGroupCornerVerts;
+                flatEndCentreVert   = firstGroupCentreVert;
+                cableEndVerts       = secondGroupCornerVerts;
+                cableEndCentreVert  = secondGroupCentreVert;
+            elseif (firstGroupCentreDist > secondGroupCentreDist)
+                flatEndVerts        = secondGroupCornerVerts;
+                flatEndCentreVert   = secondGroupCentreVert;
+                cableEndVerts       = firstGroupCornerVerts;
+                cableEndCentreVert  = firstGroupCentreVert;
+            end   
+            
+            % Very confusing, but if the sensors are in 'tan' orientation slots,
+            % then that means the tan of the sensor is aligned with the rad of the
+            % head. Need to avvound for that. 
+            if strcmp(cfg.slotori,'rad')
+                radOri(sensorIdx,1:3)       = cableEndCentreVert - flatEndCentreVert;
+                tanOri(sensorIdx,1:3)       = topPoint - bottomPoint;
+            elseif strcmp(cfg.slotori,'tan')
+                radOri(sensorIdx,1:3)       = topPoint - bottomPoint;
+                tanOri(sensorIdx,1:3)       = cableEndCentreVert - flatEndCentreVert;
+            end
+            
     end
     
     % Normalise the orientations
@@ -237,7 +385,7 @@ for sensorIdx = 1:size(sensorListing, 1)
     radOri(sensorIdx,1:3)       = radOri(sensorIdx,1:3)/L;
     L                           = sqrt(tanOri(sensorIdx,1)^2 + tanOri(sensorIdx,2)^2 + tanOri(sensorIdx,3)^2);
     tanOri(sensorIdx,1:3)       = tanOri(sensorIdx,1:3)/L;
-    
+
     % Make a matlab mesh structure from the reduced faces and verts.
     sensorFaces{sensorIdx}(:,1:3)   = redFaces;
     sensorVerts{sensorIdx}(:,1:3)   = redVerts;
@@ -275,7 +423,7 @@ end
 
 % For determining whether to flip the orientation or not, plot one sensor
 % onto the scalp at a time.
-if strcmp(cfg.correct,'yes')
+if strcmp(cfg.correct,'yes') && strcmp(cfg.sensortype,'old')
     disp('Plotting sensor pos and ori one at a time. Please manually correct...');
     repeat = 1;
     while repeat
