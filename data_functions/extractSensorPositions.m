@@ -236,19 +236,18 @@ for sensorIdx = 1:size(sensorListing, 1)
                 radOri(sensorIdx,1:3)       = bottomMiddlePoint - centrePoint(sensorIdx,1:3);
                 tanOri(sensorIdx,1:3)       = bottomMiddlePoint - bottomEndPoint(1:3);
             end
-
-        
         case 'new'
             % There is a cone on the top and bottom of the sensor. 
-            % The cones belong to the most faces.
+            % The cone vertices can be found by looking for the top two
+            % most referenced vertices within the faces of the model. 
             facesList                   = reshape(redFaces,[numel(redFaces),1]);
-            [n,bin]                     = hist(facesList,unique(facesList));
+            [n,bin]                     = hist(facesList,unique(facesList)); %#ok<HIST>
             [~,idx]                     = sort(-n);
             count                       = n(idx); % count instances
             value                       = bin(idx); % corresponding values
             
-            % Fortunately, the most common one is the bottom and second
-            % most is the top.
+            % Fortunately, the most common one is always the bottom and 
+            % second most is always the top (98 and 99)
             bottomPoint                 = [redVerts(value(1),1),redVerts(value(1),2),redVerts(value(1),3)];
             topPoint                    = [redVerts(value(2),1),redVerts(value(2),2),redVerts(value(2),3)];
             centrePoint(sensorIdx,1:3)  = mean([bottomPoint; topPoint]);
