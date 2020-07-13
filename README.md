@@ -13,3 +13,4 @@ Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
 - [Data Denoising Tutorial](./test_scripts/denoise_tutorial.ipynb) *work in progress*
 - [Finger Abduction (Beta Desync)](./test_scripts/test_motor_data.ipynb)
 - [M170 Faces](./test_scripts/html/M170_pipeline.html)
+- [Extract Sensor Pos and Ori example](./test_scripts/html/extractSensorPositions_Example.html)
