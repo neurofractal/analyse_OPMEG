@@ -49,138 +49,113 @@ powMed              = median(pow(:,:),2);
 powMedLog           = log(powMed);
 clear pow cfgPSD % tidy up
 
+% Select pow data for the foi.
+foiIdx            	= ~(freq < cfg.foi(1) | freq > cfg.foi(2));
+powMedLogFOI        = powMedLog(foiIdx);
+freqFOI             = freq(foiIdx);
+
 % The user will be asked if they are satisfied with peak identification.
 changePeaks         = true;
 minPeakProminence   = 16; % Starting point for MinPeakPriminence method.
-while changePeaks
-    noPeaks     = true;
-    while noPeaks
-        % Identify peaks based on prominence. Extract halfheight width.
-        if strcmp(cfg.independentPeaks,'yes')
-            [peakVal,peakFreq,halfHeightWidth]  = findpeaks(powMedLog,freq,'MinPeakProminence',minPeakProminence,'WidthReference','halfheight','MinPeakDistance',cfg.minPeakDistance);
-        elseif strcmp(cfg.independentPeaks,'no')
-            [peakVal,peakFreq,halfHeightWidth]  = findpeaks(powMedLog,freq,'MinPeakProminence',minPeakProminence,'WidthReference','halfheight');
-        end
-        % Remove peaks outside foi.
-        peaksToRemove           = (peakFreq < cfg.foi(1) | peakFreq > cfg.foi(2));
-        peakVal(peaksToRemove)  = [];
-        peakFreq(peaksToRemove) = [];
 
-        if isempty(peakVal)
-            minPeakProminence = minPeakProminence / 2;
-        else
-            noPeaks = false;
-        end
+noPeaks     = true;
+while noPeaks || changePeaks
+    % Identify peaks based on prominence. Extract halfheight width.
+    if strcmp(cfg.independentPeaks,'yes')
+        [peakVal,peakFreq,peakWidth]  = findpeaks(powMedLogFOI,freqFOI,'MinPeakProminence',minPeakProminence,'MinPeakDistance',cfg.minPeakDistance);
+    elseif strcmp(cfg.independentPeaks,'no')
+        [peakVal,peakFreq,peakWidth]  = findpeaks(powMedLogFOI,freqFOI,'MinPeakProminence',minPeakProminence);
     end
 
-    % Find the halfheight frequencies and interp onto fftFreq and get
-    % samples (samples in freq space)
-    threeStdDevFftFreqRange = zeros(2, length(peakFreq));
-    neighbourFftFreqRange   = zeros(2, length(peakFreq));
-    peakFftFreq             = zeros(1, length(peakFreq));
-    wholePeakPow            = cell(size(peakFreq));
-    wholePeakFreq           = cell(size(peakFreq));
-    for peakIdx = 1:length(peakFreq)        
-        % halfHeightWidth (or FWHM) = 2.355 std.dev. = 2sqrtln2 std.dev.
-        stdDevWidth                = halfHeightWidth(peakIdx) / 2.355;
-        threeStdDevFreqRange(1)    = peakFreq(peakIdx) - (5 * stdDevWidth);
-        threeStdDevFreqRange(2)    = peakFreq(peakIdx) + (5 * stdDevWidth);
-        
-        neighbourFreqRange(1)    = peakFreq(peakIdx) - cfg.Neighwidth;
-        neighbourFreqRange(2)    = peakFreq(peakIdx) + cfg.Neighwidth;
-        
-        % interpret onto fftFreq
-        % PeakFreq
-        tmp                         = abs(fftFreq - peakFreq(peakIdx));
-        [~, ~, tmp2]                = unique(tmp);
-        tmp3                        = find(tmp2 == 1, 1);
-        peakFftFreq(peakIdx)        = fftFreq(tmp3(1)); % Take the lower freq if disputed.
-
-        for i = 1:2
-            tmp                             = abs(fftFreq - threeStdDevFreqRange(i));
-            [~, ~, tmp2]                    = unique(tmp);
-            tmp3                            = find(tmp2 == 1, 1);
-            threeStdDevFftFreqRange(i,peakIdx) = fftFreq(tmp3);
-            
-            tmp                             = abs(fftFreq - neighbourFreqRange(i));
-            [~, ~, tmp2]                    = unique(tmp);
-            tmp3                            = find(tmp2 == 1, 1);
-            neighbourFftFreqRange(i,peakIdx) = fftFreq(tmp3);
-        end
-        
-        % For the plot, get the line for each peak
-        startIdx                = nearest(freq,neighbourFftFreqRange(1,peakIdx));
-        endIdx                  = nearest(freq,neighbourFftFreqRange(2,peakIdx));
-        wholePeakPow{peakIdx}   = powMed(startIdx:endIdx);
-        wholePeakFreq{peakIdx}  = freq(startIdx:endIdx);
-    end
-    
-    %% Plot result for verification
-    hold on
-    verificationPlot    = gcf;
-    
-    % Plot the peaks
-    for peakIdx = 1:length(wholePeakPow)
-        plot(wholePeakFreq{peakIdx},wholePeakPow{peakIdx},'LineWidth',2,'Color','b');
-        scatter(peakFreq(peakIdx),exp(peakVal(peakIdx)),'r');
-    end
-
-    % Plot the PSD (from ft_plot_PSD)
-    plot(freq,powMed,'LineWidth',1,'Color','k');
-    
-    % Setup axes
-    ax                  = gca;
-    ax.FontSize         = 16;
-    ax.TickLength       = [0.02 0.02];
-    set(ax,'yscale','log')
-    labY                = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-    ylabel(labY,'interpreter','latex','FontSize',30)
-    xlabel('Frequency (Hz)','FontSize',30)
-    xlim([cfg.foi(1), cfg.foi(end)]);
-
-    
-    % Ask if the user wants to change the number of peaks
-    diffPeaks           = 3;
-    while ~any(eq(diffPeaks,[0 1 2]))
-        diffPeaks = input('To continue, enter 0\nFor less peaks, enter 1\nFor more peaks, enter 2:\n');
-    end
-    
-    % There is probably a better way, but this works for now.
-    if diffPeaks == 1
-        minPeakProminence = minPeakProminence * 2;
-        close(gcf);
-    elseif diffPeaks == 2
+    if isempty(peakVal)
         minPeakProminence = minPeakProminence / 2;
-        close(gcf);
     else
-        changePeaks = 0;
+        noPeaks = false;
+        findpeaks(powMedLogFOI,freqFOI,'MinPeakProminence',minPeakProminence,'Annotate','extents');
+    end
+
+    if ~noPeaks
+        % Ask if the user wants to change the number of peaks
+        diffPeaks           = 3;
+        while ~any(eq(diffPeaks,[0 1 2]))
+            diffPeaks = input('To continue, enter 0\nFor less peaks, enter 1\nFor more peaks, enter 2:\n');
+        end
+
+        % There is probably a better way, but this works for now.
+        if diffPeaks == 1
+            minPeakProminence = minPeakProminence * 1.25;
+            close(gcf);
+            changePeaks     = true;
+        elseif diffPeaks == 2
+            minPeakProminence = minPeakProminence / 1.25;
+            close(gcf);
+            changePeaks     = true;
+        else
+            changePeaks = false;
+            close(gcf);
+        end
     end
 end
-
-% Tidy up
-close(verificationPlot)
-clear tmp* *Tmp peakIdx peaksToRemove diffPeaks changePeaks ax
 
 %% Remove Gaussian component from amplitude in spectrum
 % Run the fft
 fftData = fft(timeSeries,nsamples,2); % calculate fft to obtain spectrum that will be interpolated
 avgData = median(abs(fftData),1);
-
+interpPowMedLog = interp1(freq,powMedLog,fftFreq);
 
 switch cfg.independentPeaks
     case 'yes'
-        for peakIdx = 1:length(peakFftFreq)
-            % Find constants for all channels from the channel avg first
-            
-            % Find the indices for the frequencies of the peak.
-            threeStdDevFreqIndices  = nearest(fftFreq,threeStdDevFftFreqRange(1,peakIdx)):nearest(fftFreq,threeStdDevFftFreqRange(2,peakIdx));
-            neighbourFreqIndices    = nearest(fftFreq,neighbourFftFreqRange(1,peakIdx)):nearest(fftFreq,neighbourFftFreqRange(2,peakIdx));
+        for peakIdx = 1:length(peakFreq)
+            % Find the bounds for the width
+            peakLowerBound              = peakFreq(peakIdx) - peakWidth(peakIdx);
+            peakUpperBound              = peakFreq(peakIdx) + peakWidth(peakIdx);
+            widthFreqIndicesBound       = nearest(fftFreq,[peakLowerBound,peakUpperBound]);
 
-            % Guesses for fit (all channels)
-            % Samples Width
-            widthSamples = length(threeStdDevFreqIndices) / 6; % Magic number...
+            % And for the specified neighbourhood.
+            neighbourLowerBound         = peakFreq(1) - cfg.Neighwidth;
+            neighbourUpperBound         = peakFreq(end) + cfg.Neighwidth;
+            neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
+            neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
 
+            % Get the chan avg data for those bounds.
+            neighbourData               = log(abs(avgData(neighbourFreqIndices)));
+
+            % Find the bounds for the specified neighbourhood.
+            indivNeighbourLowerBound         = peakFreq(peakIdx) - cfg.Neighwidth;
+            indivNeighbourUpperBound         = peakFreq(peakIdx) + cfg.Neighwidth;
+            indivNeighbourFreqIndices        = nearest(fftFreq,[indivNeighbourLowerBound,indivNeighbourUpperBound]);
+
+            % Get the chan avg data for those bounds.
+            indivNeighbourData               = log(abs(avgData(neighbourFreqIndices)));
+
+            % Guesses for fit (peak level)
+            % Amplitude
+            % Floor
+            fitFloor        = mean(neighbourData);
+            peak            = max(indivNeighbourData);
+            A               = peak - fitFloor;
             
+            % Centre
+            x0          = round(mean(indivNeighbourFreqIndices));
+
+            % Gamma
+            indivPeakHalfMaxLowerBound      = peakFreq(peakIdx) - (peakWidth(peakIdx)/2);
+            indivPeakHalfMaxUpperBound      = peakFreq(peakIdx) + (peakWidth(peakIdx)/2);
+            indivPeakWidthIndices           = nearest(fftFreq,[indivPeakHalfMaxLowerBound,indivPeakHalfMaxUpperBound]);
+            g                               = indivPeakWidthIndices(2) - indivPeakWidthIndices(1) + 1;
+
+            % Guesses for fit (channel level)
+            % Slope
+            endVals             = mean(neighbourData((end - (round(g/4))):end));
+            startVals           = mean(neighbourData(1:1+(round(g/4))));
+            b                   = (endVals - startVals) / (neighbourFreqIndicesBound(end) - neighbourFreqIndicesBound(1));
+
+            % Constant
+            % What is c equal to for the slope go through the middle?
+            middleValue     = mean([endVals,startVals]);
+            c               = middleValue - (b * median(neighbourFreqIndicesBound));
+            
+
             % Define function for Gaussian/Lorentzian with and without
             % slopes.
             gaussWithSlope = @(A, x0, s, b, c, x)...
@@ -193,53 +168,64 @@ switch cfg.independentPeaks
                 (b*x) + c;
 
             lorentzianWithSlope = @(A, x0, g, b, c, x)...
-                ((A * (g^2))./((g^2) + ((x - x0).^2))) + (b*x) + c;
+                ((A .* (g.^2))./((g.^2) + ((x - x0).^2))) + (b.*x) + c;
 
             lorentzian = @(A, x0, g, x)...
-                ((A * (g^2))./((g.^2) + ((x - x0).^2)));
+                ((A .* (g.^2))./((g.^2) + ((x - x0).^2)));
             
-            
-            % Get the data being fit
-            neighbourData   = log(abs(avgData(neighbourFreqIndices)));
-            threeStdDevData = log(abs(avgData(threeStdDevFreqIndices)));
-
-            % Guesses for fit (channel level)
-            % Floor
-            fitFloor    = mean(threeStdDevData,2);
-
-            % Guass peak
-            [peak,peakLoc]    = max(threeStdDevData,[],2);
-
-            % Gauss centre freq
-            centre = threeStdDevFreqIndices(peakLoc);
-
-            % Slope
-            slopeC       = (neighbourData(end) - neighbourData(1)) / (threeStdDevFreqIndices(end) - threeStdDevFreqIndices(1));
-
-            % Constant
-            constant    = neighbourData(1) - (slopeC *  neighbourFreqIndices(1));
-
             switch cfg.method
                 case 'leaveSlopeMinusGauss'
                     % Fit a gauss with slope to the data.
                     fittedAvgModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
-                                                'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+                                                'StartPoint', [A, x0, g, b, c]);
 
+                    bestGuess           = gaussWithSlope(A, x0, g, b, neighbourFreqIndices');
+                    
                 case 'removeGauss'
                     % Fit a gauss with slope to the data.
                     fittedAvgModel    = fit(neighbourFreqIndices', neighbourData', gaussWithSlope,...
-                                                'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
-
+                                                'StartPoint', [A, x0, g, b, c]);
+                    
+                    bestGuess           = gaussWithSlope(A, x0, g, b, neighbourFreqIndices');
+                    
                 case 'removeLorentzian'
                     % Fit a Lorentzian with slope
                     fittedAvgModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
-                        'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
-
+                        'StartPoint', [A, x0, g, b, c]);
+                    
+                    bestGuess = lorentzianWithSlope(A, x0, g, b, c, neighbourFreqIndices');
+                    
                 case 'leaveSlopeMinusLorentzian'
                     % Fit a lortenzian with slope to the data.
                     fittedAvgModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlope,...
-                        'StartPoint', [(peak - fitFloor), centre, widthSamples, slopeC, constant]);
+                        'StartPoint', [A, x0, g, b, c]);
+                    
+                    fftFreqIndices = 1:length(fftFreq);
+                    bestGuess = lorentzianWithSlope(A, x0, g, b, c, fftFreqIndices');
             end
+            
+            % See how good the fit was.
+            slopeOnly = slope(b, c, fftFreqIndices');
+            hold on
+            plot(neighbourFreqIndices, neighbourData);
+            plot(fftFreqIndices,bestGuess);
+            plot(fittedAvgModel);
+            plot(slopeOnly);
+            plot(fftFreqIndices,interpPowMedLog + 10);
+            hold off
+            
+            % Plot best guess parameters
+            
+            x = fittedAvgModel(fftFreqIndices);
+            
+            % Select pow data for the foi.
+            foiIdx            	= ~(freq < cfg.foi(1) | freq > cfg.foi(2));
+            powMedLogFOI        = powMedLog(foiIdx);
+            freqFOI             = freq(foiIdx);
+
+            
+            [peakVal,peakFreq,peakWidth,Ppk]  = findpeaks(x,fftFreq);
+            findpeaks(x,fftFreq,'Annotate','extents');
             
             % Redefine functions with constants for peak and width.
             gaussWithSlopeC = @(A, b, c, x)...
@@ -254,11 +240,13 @@ switch cfg.independentPeaks
             lorentzianC = @(A, x)...
                 ((A * (fittedAvgModel.g^2))./((fittedAvgModel.g.^2) + ((x - fittedAvgModel.x0).^2)));
             
-            % Fit channels independently (may need to revise this)
+            
+            
+            % Fit channels independently
             for chanIdx = 1:length(fftData(:,1))
                 % Get the data being fit.
+                peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
                 neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
-                threeStdDevData = log(abs(fftData(chanIdx,threeStdDevFreqIndices)));
 
                 switch cfg.method
                     case 'leaveSlopeMinusGauss'
@@ -321,65 +309,92 @@ switch cfg.independentPeaks
                         tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (6 * abs(fittedAvgModel.g)));
                         indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
 
+                        bestGuess       = lorentzianWithSlopeC(fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c, neighbourFreqIndices');
+
                         % Get just the slope
                         replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
                 end
                 
                 % debug plots
-                subplot(2,1,1);
+                subplot(3,1,1);
                 hold on
                 plot(neighbourFreqIndices, neighbourData)
                 plot(fittedModel)
                 hold off
-                subplot(2,1,2);
+                subplot(3,1,2);
                 hold on
                 plot(indicesToReplace,replacementData)
                 plot(fittedModel)
                 hold off
+                subplot(3,1,3);
+                hold on
+                plot(fittedModel)
+                plot(bestGuess)
+                hold off
+                
                 % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
                 fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
             end
         end
     case 'no'
-        % Find the total width indices for all peaks together
-        maxThreeStdDevFreqIndices   = nearest(fftFreq,min(threeStdDevFftFreqRange,[],'all')):nearest(fftFreq,max(threeStdDevFftFreqRange,[],'all'));
-        neighbourFreqIndices        = nearest(fftFreq,min(neighbourFftFreqRange,[],'all')):nearest(fftFreq,max(neighbourFftFreqRange,[],'all'));
+        % Check there are 2 or more peaks
+        if length(peakFreq) < 2
+            error('Only one peak found. Please set cfg.independentPeaks to yes');
+        end
         
-        % Find constants from the avg data.
-        maxThreeStdDevData      = log(abs(avgData(maxThreeStdDevFreqIndices)));
-        neighbourData           = log(abs(avgData(neighbourFreqIndices)));
+        % Find the bounds for three times the width
+        peakLowerBound              = peakFreq - peakWidth;
+        peakUpperBound              = peakFreq + peakWidth;
+        widthFreqIndicesBound            = nearest(fftFreq,[min(peakLowerBound),max(peakUpperBound)]);
+        
+        % And for the specified neighbourhood.
+        neighbourLowerBound         = peakFreq(1) - cfg.Neighwidth;
+        neighbourUpperBound         = peakFreq(end) + cfg.Neighwidth;
+        neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
+        neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
+        
+        % Get the chan avg data for those bounds.
+        peakWidthData              = log(abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
+        neighbourData               = log(abs(avgData(neighbourFreqIndices)));
 
         % Guesses for fit (channel level)
         % Slope
-        slopeC       = (neighbourData(end) - neighbourData(1)) / (maxThreeStdDevFreqIndices(end) - maxThreeStdDevFreqIndices(1));
+        b       = (neighbourData(end) - neighbourData(1)) / (neighbourFreqIndicesBound(end) - neighbourFreqIndicesBound(1));
 
         % Constant
-        constant    = neighbourData(1) - (slopeC *  neighbourFreqIndices(1));
+        constant    = neighbourData(1) - (b *  neighbourFreqIndices(1));
 
         A           = zeros(size(peakFreq));
         x0          = zeros(size(peakFreq));
         g           = zeros(size(peakFreq));
-        b           = slopeC;
+        b           = b;
         c           = constant;
         for peakIdx = 1:length(peakFreq)
-            % Find indices for the peak.
-            threeStdDevFreqIndices  = nearest(fftFreq,threeStdDevFftFreqRange(1,peakIdx)):nearest(fftFreq,threeStdDevFftFreqRange(2,peakIdx));
-%             threeStdDevData         = log(abs(avgData(threeStdDevFreqIndices)));
-            threeStdDevData         = abs(avgData(threeStdDevFreqIndices));
+            % Find indices for individual peaks.
+            % Find the bounds for the specified neighbourhood.
+            indivNeighbourLowerBound         = peakFreq(peakIdx) - cfg.Neighwidth;
+            indivNeighbourUpperBound         = peakFreq(peakIdx) + cfg.Neighwidth;
+            indivNeighbourFreqIndices        = nearest(fftFreq,[indivNeighbourLowerBound,indivNeighbourUpperBound]);
+
+            % Get the chan avg data for those bounds.
+            indivNeighbourData               = log(abs(avgData(neighbourFreqIndices)));
             
             % Guesses for fit (peak level)
             % Floor
-            fitFloor        = mean(threeStdDevData,2);
+            fitFloor        = mean(peakWidthData);
 
             % Peak
-            peak            = threeStdDevData(round(length(threeStdDevData)/2));
+            peak            = indivNeighbourData(round(length(indivNeighbourData)/2));
 
             % Centre freq
-            centre          = threeStdDevFreqIndices(round(length(threeStdDevFreqIndices)/2));
+            centre          = round(mean(indivNeighbourFreqIndices));
 
             % Guesses for fit (all channels)
             % Gamma
-            widthSamples    = length(threeStdDevFreqIndices) / 6;
+            indivPeakHalfMaxLowerBound             = peakFreq(peakIdx) - (peakWidth(peakIdx)/2);
+            indivPeakHalfMaxUpperBound             = peakFreq(peakIdx) + (peakWidth(peakIdx)/2);
+            indivPeakWidthIndices           = nearest(fftFreq,[indivPeakHalfMaxLowerBound,indivPeakHalfMaxUpperBound]);
+            widthSamples                    = indivPeakWidthIndices(2) - indivPeakWidthIndices(1) + 1;
 
             % Guesses for fit (channel level)
             A(peakIdx)      = peak - fitFloor;
@@ -394,17 +409,15 @@ switch cfg.independentPeaks
             twoLorentzian = @(A1, x01, g1, A2, x02, g2, x)...
                     ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2)));
 
-            % Start values for gamma have been set to 1. The guess is not
-            % well worked at the moment. 
             fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlope,...
-                                'StartPoint', [A(1), x0(1), 1, A(2), x0(2), 1, b, c]);
+                                'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), b, c]);
 
             % Get the width of fitted lorentzians.
             x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
             x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
             gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
-            tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax));
-            tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
+            tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (6 * gMax)); % Magic number
+            tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax)); % Magic number
             indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
 
             if length(indicesToReplace) > length(neighbourData)
@@ -419,7 +432,7 @@ switch cfg.independentPeaks
                     ((A1 * (g1^2))./((g1^2) + ((x - x01).^2))) + ((A2 * (g2^2))./((g2^2) + ((x - x02).^2))) + ((A3 * (g3^2))./((g3^2) + ((x - x03).^2)));
 
             fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlope,...
-                                'StartPoint', [A(1), x0(1), 1, A(2), x0(2), 1, A(3), x0(3), 1, b, c]);
+                                'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), A(3), x0(3), g(3), b, c]);
             
             % Get the width of fitted lorentzians.
             x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
@@ -429,10 +442,9 @@ switch cfg.independentPeaks
             tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (6 * gMax));
         end
 
-        
         % Now apply per channel with some constants from the avg.
         for chanIdx = 1:length(fftData(:,1))
-            maxThreeStdDevData = log(abs(fftData(chanIdx,maxThreeStdDevFreqIndices)));
+            peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
             neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
 
             if length(peakFreq) == 2
@@ -444,7 +456,9 @@ switch cfg.independentPeaks
 
                 fittedModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlopeC,...
                                     'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c]);
-                                
+                
+                bestGuess       = twoLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c,neighbourFreqIndices');
+                
                 % Get the width of fitted lorentzians.
                 x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
                 x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
@@ -494,15 +508,20 @@ switch cfg.independentPeaks
                 replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
             end
             % debug plots
-            subplot(2,1,1);
+            subplot(3,1,1);
             hold on
             plot(neighbourFreqIndices, neighbourData)
             plot(fittedModel)
             hold off
-            subplot(2,1,2);
+            subplot(3,1,2);
             hold on
             plot(indicesToReplace,replacementData)
             plot(fittedModel)
+            hold off
+            subplot(3,1,3);
+            hold on
+            plot(fittedModel)
+            plot(bestGuess)
             hold off
             % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
             fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
