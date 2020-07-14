@@ -1,31 +1,37 @@
 function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
-% Function to peaks in spectrum, model their shape and remove them before
-% transforming back into time domain. 
+% Function to find peaks in spectrum, model their shape and remove them 
+% before transforming back into time domain. 
 % 
 % Function is based on Search Results ft_preproc_dftfilter. In particular,
 % the spectrum interpolation method (Leske & Dalal, 2019, NeuroImage 189,
 % doi: 10.1016/j.neuroimage.2019.01.026).
 % 
-% The signal is:
-% 1)   transformed into the frequency domain via a discrete Fourier 
-%       transform (DFT), 
+% Overview of function
+% 1)   Data transformed into the frequency domain via a discrete Fourier 
+%       transform (DFT). 
 % 2)   Peaks in the specified frequency range are identified and some
 %       characteristics extracted about them.
-% 3)   Each peak is modelled as a Guassian on a slope. The Gaussian part is
-%       replaced by the slope
+% 3)   The characteristics are used to model them onto data from each
+%       channel.
+% 4)   A specified method is used to remove the peaks.
 % 4)   The signal is transformed back into the time domain via inverse DFT
-%       (iDFT).
+%       (iDFT). 
 %
 % Use as
 %   [filt] = ft_preproc_dft_remove_gause(cfg, data)
-% where
-%   data            Fieldtrip data structure with continuous data.
-%   cfg             Structure containing the following:
-%   cfg.foi                 = [start end], freq range to remove peaks between e.g. [40 60];
+%   where
+%   data                    = Fieldtrip data structure with continuous
+%                               data. Usually raw data.
+%   cfg                     = Structure containing the following:
+%   cfg.foi                 = [start end], freq range to remove peaks 
+%                               between e.g. [40 60];
 %   cfg.Neighwidth          = width (in Hz) of peaks to evaluate, e.g. 2;
-%   cfg.minPeakDistance     = minimum distance between peaks. minimum of 2 Neighwidth recommended.
-%   cfg.method              = 'leaveSlope' or 'removeGauss'
-%   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks independently or together.
+%   cfg.minPeakDistance     = minimum distance in Hz between peaks.
+%   cfg.method              = 'leaveSlopeMinusGauss', 'removeGauss' 
+%                               'removeLorentzian', or 
+%                               'leaveSlopeMinusLorentzian'
+%   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks 
+%                               independently or together.
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
@@ -33,12 +39,16 @@ nsamples            = length(timeSeries);
 samplingFreq        = data.fsample;
 fftFreq             = samplingFreq * linspace(0, 1, nsamples);
 
+% Run the fft
+fftData             = fft(timeSeries,nsamples,2);
+avgData             = median(abs(fftData),1);
+
 %% Identify peaks in power in PSD
 % Calculate PSD in smaller epochs. 
 cfgPSD              = [];
 cfgPSD.channel      = 'all';
 cfgPSD.trial_length = 3;
-cfgPSD.method       = 'tim';
+cfgPSD.method       = 'tim'; % Breaks into epochs
 cfgPSD.foi          = cfg.foi;
 cfgPSD.plot         = 'no';
 [pow,freq,~]        = ft_opm_psd(cfgPSD,data);
@@ -49,8 +59,11 @@ powMed              = median(pow(:,:),2);
 powMedLog           = log(powMed);
 
 % And interpret to the same index as the main fft (makes things easier)
-smoothPow = interp1(freq,powMedLog,fftFreq);
-clear pow powMed powMedLog cfgPSD freq % tidy up
+smoothPow           = interp1(freq,powMedLog,fftFreq);
+
+% Tidy up
+clear pow powMed powMedLog cfgPSD freq samplingFreq cfgPSD timeSeries...
+nsamples
 
 % Select pow data for the foi.
 foiIdx            	= ~(fftFreq < cfg.foi(1) | fftFreq > cfg.foi(2));
@@ -118,11 +131,6 @@ while noPeaks || changePeaks
 end
 
 %% Remove Gaussian component from amplitude in spectrum
-% Run the fft
-fftData = fft(timeSeries,nsamples,2); % calculate fft to obtain spectrum that will be interpolated
-avgData = median(abs(fftData),1);
-
-
 switch cfg.independentPeaks
     case 'yes'
         for peakIdx = 1:length(peakFreq)
@@ -150,7 +158,6 @@ switch cfg.independentPeaks
 
             % Guesses for fit (peak level)
             % Amplitude
-            % Floor
             A               = peakProminence(peakIdx);
             
             % Centre
@@ -219,7 +226,7 @@ switch cfg.independentPeaks
                     bestGuess = lorentzianWithSlope(A, x0, g, b, c, fftFreqIndices');
             end
             
-%             % See how good the fit was.
+% %             See how good the fit was.
 %             slopeOnly = slope(b, c, fftFreqIndices');
 %             hold on
 %             plot(neighbourFreqIndices, neighbourData);
@@ -305,7 +312,7 @@ switch cfg.independentPeaks
                         fittedModel = fit(neighbourFreqIndices', neighbourData', lorentzianWithSlopeC,...
                             'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
 
-                        % Get the width of 3 std.dev of the fitted Gauss
+                        % Get the width of 6 gamma of the fitted Lorentz
                         tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (6 * abs(fittedAvgModel.g)));
                         tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (6 * abs(fittedAvgModel.g)));
                         indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
