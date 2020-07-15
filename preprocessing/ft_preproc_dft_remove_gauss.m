@@ -140,8 +140,8 @@ switch cfg.independentPeaks
             widthFreqIndicesBound       = nearest(fftFreq,[peakLowerBound,peakUpperBound]);
 
             % And for the specified neighbourhood.
-            neighbourLowerBound         = peakFreq(1) - cfg.Neighwidth;
-            neighbourUpperBound         = peakFreq(end) + cfg.Neighwidth;
+            neighbourLowerBound         = peakFreq(peakIdx) - cfg.Neighwidth;
+            neighbourUpperBound         = peakFreq(peakIdx) + cfg.Neighwidth;
             neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
             neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
 
@@ -321,6 +321,9 @@ switch cfg.independentPeaks
 
                         % Get just the slope
                         replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
+                        
+                        % The slope will always be slightly too low.
+                        neighbourData(indicesToReplace) = replacementData;
                 end
                 
 %                 % debug plots
