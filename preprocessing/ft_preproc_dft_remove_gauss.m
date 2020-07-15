@@ -235,7 +235,7 @@ switch cfg.independentPeaks
 %             plot(slopeOnly);
 %             plot(fftFreqIndices,smoothPow + 10);
 %             hold off
-            
+%             
             % Redefine functions with constants for peak and width.
             gaussWithSlopeC = @(A, b, c, x)...
                 (A*exp(-2*((x-fittedAvgModel.x0)/fittedAvgModel.s).^2)) + (b*x) + c;
@@ -323,22 +323,22 @@ switch cfg.independentPeaks
                         replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
                 end
                 
-                % debug plots
-                subplot(3,1,1);
-                hold on
-                plot(neighbourFreqIndices, neighbourData)
-                plot(fittedModel)
-                hold off
-                subplot(3,1,2);
-                hold on
-                plot(indicesToReplace,replacementData)
-                plot(fittedModel)
-                hold off
-                subplot(3,1,3);
-                hold on
-                plot(fittedModel)
-                plot(bestGuess)
-                hold off
+%                 % debug plots
+%                 subplot(3,1,1);
+%                 hold on
+%                 plot(neighbourFreqIndices, neighbourData)
+%                 plot(fittedModel)
+%                 hold off
+%                 subplot(3,1,2);
+%                 hold on
+%                 plot(indicesToReplace,replacementData)
+%                 plot(fittedModel)
+%                 hold off
+%                 subplot(3,1,3);
+%                 hold on
+%                 plot(fittedModel)
+%                 plot(bestGuess)
+%                 hold off
                 
                 % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
                 fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
@@ -567,22 +567,22 @@ switch cfg.independentPeaks
                         bestGuess       = threeLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c, neighbourFreqIndices');
                 end
             end
-            % debug plots
-            subplot(3,1,1);
-            hold on
-            plot(neighbourFreqIndices, neighbourData)
-            plot(fittedModel)
-            hold off
-            subplot(3,1,2);
-            hold on
-            plot(indicesToReplace,replacementData)
-            plot(fittedModel)
-            hold off
-            subplot(3,1,3);
-            hold on
-            plot(fittedModel)
-            plot(bestGuess)
-            hold off
+%             % debug plots
+%             subplot(3,1,1);
+%             hold on
+%             plot(neighbourFreqIndices, neighbourData)
+%             plot(fittedModel)
+%             hold off
+%             subplot(3,1,2);
+%             hold on
+%             plot(indicesToReplace,replacementData)
+%             plot(fittedModel)
+%             hold off
+%             subplot(3,1,3);
+%             hold on
+%             plot(fittedModel)
+%             plot(bestGuess)
+%             hold off
             % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
             fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
         end
