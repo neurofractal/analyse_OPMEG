@@ -32,11 +32,14 @@ function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
 %                               'leaveSlopeMinusLorentzian'
 %   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks 
 %                               independently or together.
+<<<<<<< HEAD
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
 %                               fitting.
 %   cfg.strength            = g or s width to remove. ELABORATE
 %   cfg.trialLength         = epoch length in seconds. Determines the
 %                               smoothness of data for peak identifying.
+=======
+>>>>>>> parent of 350e0dd... Added option to log before fitting or not
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
@@ -46,10 +49,32 @@ fftFreq             = samplingFreq * linspace(0, 1, nsamples);
 
 % Run the fft
 fftData             = fft(timeSeries,nsamples,2);
+<<<<<<< HEAD
 
 % Get pow
 fftPow              = abs(fftData);
 avgFftPow           = median(fftPow,1);
+=======
+avgData             = median(abs(fftData),1);
+
+%% Identify peaks in power in PSD
+% Calculate PSD in smaller epochs. 
+cfgPSD              = [];
+cfgPSD.channel      = 'all';
+cfgPSD.trial_length = 3;
+cfgPSD.method       = 'tim'; % Breaks into epochs
+cfgPSD.foi          = cfg.foi;
+cfgPSD.plot         = 'no';
+[pow,freq,~]        = ft_opm_psd(cfgPSD,data);
+
+% Use those to produce a smoother PSD output for peak identification.
+powMed              = median(pow(:,:,:),3);
+powMed              = median(pow(:,:),2);
+powMedLog           = log(powMed);
+
+% And interpret to the same index as the main fft (makes things easier)
+smoothPow           = interp1(freq,powMedLog,fftFreq);
+>>>>>>> parent of 350e0dd... Added option to log before fitting or not
 
 % Tidy up
 clear timeseries samplingFreq nsamples 
@@ -157,6 +182,7 @@ switch cfg.independentPeaks
             neighbourUpperBound         = peakFreq(peakIdx) + (cfg.Neighwidth/2);
             neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
             neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
+<<<<<<< HEAD
             
             % And the frequencies
             neighbourFreq               = fftFreq(neighbourFreqIndices);
@@ -168,6 +194,19 @@ switch cfg.independentPeaks
                 % Get the chan avg data for those bounds.
                 neighbourData               = avgFftPow(neighbourFreqIndices);
             end
+=======
+
+            % Get the chan avg data for those bounds.
+            neighbourData               = log(abs(avgData(neighbourFreqIndices)));
+
+            % Find the bounds for the specified neighbourhood.
+            indivNeighbourLowerBound         = peakFreq(peakIdx) - cfg.Neighwidth;
+            indivNeighbourUpperBound         = peakFreq(peakIdx) + cfg.Neighwidth;
+            indivNeighbourFreqIndices        = nearest(fftFreq,[indivNeighbourLowerBound,indivNeighbourUpperBound]);
+
+            % Get the chan avg data for those bounds.
+            indivNeighbourData               = log(abs(avgData(neighbourFreqIndices)));
+>>>>>>> parent of 350e0dd... Added option to log before fitting or not
 
             % Guesses for fit (peak level)
             % Amplitude
@@ -266,6 +305,7 @@ switch cfg.independentPeaks
             
             % Fit channels independently
             for chanIdx = 1:length(fftData(:,1))
+<<<<<<< HEAD
                 if strcmp(cfg.log,'yes')
                     % Get the data being fit.
                     neighbourData   = log(fftPow(chanIdx,neighbourFreqIndices));
@@ -274,6 +314,12 @@ switch cfg.independentPeaks
                     neighbourData   = fftPow(chanIdx,neighbourFreqIndices);
                 end
                 
+=======
+                % Get the data being fit.
+                peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
+                neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
+
+>>>>>>> parent of 350e0dd... Added option to log before fitting or not
                 switch cfg.method
                     case 'leaveSlopeMinusGauss'
                         % Fit a gauss with slope to the data.
@@ -330,6 +376,7 @@ switch cfg.independentPeaks
                         fittedModel = fit(neighbourFreq', neighbourData', lorentzianWithSlopeC,...
                             'StartPoint', [fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c]);
 
+<<<<<<< HEAD
                         % Get the width of the fitted Lorentz
                         tmpStartIdx             = nearest(neighbourFreq,fittedAvgModel.x0 - (cfg.strength * abs(fittedAvgModel.g)));
                         tmpEndIdx               = nearest(neighbourFreq,fittedAvgModel.x0 + (cfg.strength * abs(fittedAvgModel.g)));
@@ -358,7 +405,20 @@ switch cfg.independentPeaks
 %                         plot(freqToReplace,replacementData);
 %                         plot(fittedSlope,neighbourFreqIndices',tmp')
 %                         plot(indicesToReplace,replacementData2);
+=======
+                        % Get the width of 6 gamma of the fitted Lorentz
+                        tmpStartIdx             = nearest(neighbourFreqIndices,fittedAvgModel.x0 - (6 * abs(fittedAvgModel.g)));
+                        tmpEndIdx               = nearest(neighbourFreqIndices,fittedAvgModel.x0 + (6 * abs(fittedAvgModel.g)));
+                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+
+                        bestGuess       = lorentzianWithSlopeC(fittedAvgModel.A, fittedAvgModel.b, fittedAvgModel.c, neighbourFreqIndices');
+
+                        % Get just the slope
+                        replacementData         = slope(fittedModel.b,fittedModel.c, indicesToReplace);
+>>>>>>> parent of 350e0dd... Added option to log before fitting or not
                         
+                        % The slope will always be slightly too low.
+                        neighbourData(indicesToReplace) = replacementData;
                 end
                 fittedData = lorentzianWithSlopeC(fittedModel.A,fittedModel.b,fittedModel.c, neighbourFreq);
 %                 
@@ -379,12 +439,7 @@ switch cfg.independentPeaks
 %                 hold off
 %                 
                 % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
-                if strcmp(cfg.log,'yes')
-                    fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
-                elseif strcmp(cfg.log,'no')
-                    fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
-                end
-                
+                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
             end
         end
     case 'no'
@@ -404,16 +459,9 @@ switch cfg.independentPeaks
         neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
         neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
         
-        if strcmp(cfg.log,'yes')
-            % Get the chan avg data for those bounds.
-            peakWidthData               = log(abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
-            neighbourData               = log(abs(avgData(neighbourFreqIndices)));
-        elseif strcmp(cfg.log,'no')
-            % Get the chan avg data for those bounds.
-            peakWidthData               = abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end)));
-            neighbourData               = abs(avgData(neighbourFreqIndices));
-        end
-       
+        % Get the chan avg data for those bounds.
+        peakWidthData               = log(abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
+        neighbourData               = log(abs(avgData(neighbourFreqIndices)));
         
         % Guesses for fit (channel level)
         A           = zeros(size(peakFreq));
@@ -488,14 +536,8 @@ switch cfg.independentPeaks
 
         % Now apply per channel with some constants from the avg.  
         for chanIdx = 1:length(fftData(:,1))
-            if strcmp(cfg.log,'yes')
-                peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
-                neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
-            elseif strcmp(cfg.log,'no')
-                peakWidthData = abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end)));
-                neighbourData   = abs(fftData(chanIdx,neighbourFreqIndices));
-            end
-            
+            peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
+            neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
 
             if length(peakFreq) == 2
                  twoLorentzianWithSlopeC = @(A1, A2, b, c, x)...
@@ -639,13 +681,8 @@ switch cfg.independentPeaks
 %             plot(fittedModel)
 %             plot(bestGuess)
 %             hold off
-
             % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
-            if strcmp(cfg.log,'yes')
-                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
-            elseif strcmp(cfg.log,'no')
-                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
-            end
+            fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
         end
 end
 
