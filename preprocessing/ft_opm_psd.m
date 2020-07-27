@@ -308,6 +308,50 @@ switch method_for_fft
             end
         end
         
+        %4. MATLAB's inbuilt pwelch
+    case 'pwelch'
+        
+        if isempty(cfg.trial_length)
+            numsamp = length(x);
+        else 
+            numsamp = rawData.fsample*cfg.trial_length;
+        end
+        
+        x = rawData.trial{1};
+        [pow,freq] = pwelch(x',numsamp,[],[],rawData.fsample);
+        
+        % Is this correct?
+        pow = pow';
+        
+        strt = find(freq > cfg.foi(1),1,'first');
+        stp  = find(freq < cfg.foi(2),1,'last');
+
+        % Funky colorscheme, looks OK...
+        colormap123     = linspecer(length(label));
+
+         if strcmp(cfg.plot,'yes')
+            % Make a Figure
+            figure()
+            set(gcf,'Position',[100 100 1200 800]);
+            
+            h = plot(freq(strt:stp),log10(pow(:,strt:stp)),...
+                'LineWidth',1);
+            set(h, {'color'},num2cell(colormap123,2));
+            hold on;
+            plot(freq(strt:stp),log10(mean(pow(:,strt:stp),1)),'-k','LineWidth',2);
+            grid on
+            ax = gca; % current axes
+            ax.FontSize = 20;
+            ax.TickLength = [0.02 0.02];
+            ylabel('PSD (dB/Hz)','FontSize',30);
+            xlabel('Frequency (Hz)','FontSize',30);
+            % Legend
+            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),'location','eastoutside');
+            hl = findobj(hobj,'type','line');
+            set(hl,'LineWidth',4);
+            ht = findobj(hobj,'type','text');
+            set(ht,'FontSize',12);
+         end
         
 end
 
