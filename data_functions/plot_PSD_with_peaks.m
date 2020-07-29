@@ -60,6 +60,6 @@ if ~isempty(cfg.ylim)
 end
 for f = 1:length(freq(l))
     freq_list = freq(l);
-    h=text(freq_list(f)+0.5,p(f)+50,num2str(freq_list(f)),'FontSize',8);
+    h=text(freq_list(f)+0.5,p(f)+10,num2str(freq_list(f)),'FontSize',12);
     set(h,'Rotation',45);
 end
