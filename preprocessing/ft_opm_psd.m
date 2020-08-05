@@ -217,14 +217,17 @@ switch method_for_fft
         Nf = ceil((N+1)/2);
         nepochs = size(eD,3);
         pow = zeros(Nf,size(eD,1),nepochs);
-        wind  = window(@flattopwin,size(eD,2));
+        wind  = window(@hanning,size(eD,2));
+        coFac = max(wind)/mean(wind);
         wind = repmat(wind,1,size(eD,1));
         
         % Calculate PSD for each epoch
         for j = 1:nepochs
             Btemp=eD(:,:,j)';
-            Btemp = Btemp.*wind;
-            mu=mean(Btemp);
+            Btemp = Btemp.*wind*coFac;
+            Btemp = Btemp;
+            
+            mu=median(Btemp);
             zf = bsxfun(@minus,Btemp,mu);
             fzf = zf;
             N= length(fzf);
