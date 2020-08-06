@@ -51,10 +51,11 @@ end
 
 t.Color(4)=cfg.transparency;
 hold on;
-plot(freq(l),p,'o')
-xlabel('Frequency (Hz)','FontSize',14)
+plot(freq(l),p,'o');
+set(gca,'FontSize',12);
+xlabel('Frequency (Hz)','FontSize',20)
 labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-ylabel(labY,'interpreter','latex','FontSize',14)
+ylabel(labY,'interpreter','latex','FontSize',20)
 if ~isempty(cfg.ylim)
    ylim([cfg.ylim(1) cfg.ylim(2)]);
 end
