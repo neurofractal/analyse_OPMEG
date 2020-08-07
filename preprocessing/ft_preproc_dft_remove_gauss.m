@@ -27,14 +27,13 @@ function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
 %                               between e.g. [40 60];
 %   cfg.Neighwidth          = width (in Hz) of peaks to evaluate, e.g. 2;
 %   cfg.minPeakDistance     = minimum distance in Hz between peaks.
-%   cfg.method              = 'leaveSlopeMinusGauss', 'removeGauss' 
-%                               'removeLorentzian', or 
-%                               'leaveSlopeMinusLorentzian'
+%   cfg.method              = 'leaveSlope' or 'removePeak' 
+% 	cfg.peakShape           = 'Guassian' or 'Lorentzian'
 %   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks 
 %                               independently or together.
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
 %                               fitting.
-%   cfg.strength            = g or s width to remove. ELABORATE
+%   cfg.strength            = g multiplier width to remove. ELABORATE
 %   cfg.trialLength         = epoch length in seconds. Determines the
 %                               smoothness of data for peak identifying.
 
