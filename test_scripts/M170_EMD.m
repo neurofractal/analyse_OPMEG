@@ -50,35 +50,36 @@ ylim([1 1e6])
 cfg             = [];
 cfg.poly_num    = 10;
 cfg.winsize     = 1;
-[rawData_detrend]  = ft_robust_detrend(cfg,rawData);
+rawData  = ft_robust_detrend(cfg,rawData);
 
 cfg= [];
 cfg.viewmode = 'vertical';
 cfg.blocksize = 10;
-ft_databrowser(cfg,rawData_detrend);
+ft_databrowser(cfg,rawData);
 
 
 %%
 
-% cfg             = [];
-% cfg.hpfilter    = 'yes';
-% cfg.hpfreq      = 2;
-% rawData         = ft_preprocessing(cfg,rawData);
+cfg             = [];
+cfg.hpfilter    = 'yes';
+cfg.hpfreq      = 0.1;
+cfg.hpfiltord   = 3;
+rawData         = ft_preprocessing(cfg,rawData);
 
 cfg             = [];
 cfg.lpfilter    = 'yes';
 cfg.lpfreq      = 98;
-rawData_detrend         = ft_preprocessing(cfg,rawData_detrend);
+rawData         = ft_preprocessing(cfg,rawData);
 
 cfg             = [];
 cfg.bsfilter    = 'yes';
 cfg.bsfreq      = [115 125];
-rawData_detrend         = ft_preprocessing(cfg,rawData_detrend);
+rawData         = ft_preprocessing(cfg,rawData);
 
 cfg             = [];
 cfg.bsfilter    = 'yes';
 cfg.bsfreq      = [98 102];
-rawData_detrend = ft_preprocessing(cfg,rawData_detrend);
+rawData         = ft_preprocessing(cfg,rawData);
 
 % cfg = [];
 % cfg.latency = [0 200];
@@ -100,23 +101,20 @@ cfg.trial_length    = 10;
 cfg.method          = 'tim';
 cfg.foi             = [0.1 150];
 cfg.plot            = 'yes';
-pow                 = ft_opm_psd(cfg,rawData_detrend);
-
-%%
-
+pow                 = ft_opm_psd(cfg,rawData);
 
 %%
 cfg                 = [];
 cfg.channel         = {'N0-TAN','N4-TAN','N3-TAN','MV-TAN','N0-RAD','N4-RAD',...
      'N3-RAD','MV-RAD'};
-reference_channels  = ft_selectdata(cfg,rawData_detrend);
+reference_channels  = ft_selectdata(cfg,rawData);
 
 %%
 cfg                 = [];
 cfg.channel         = vertcat(ft_channelselection_opm('MEG',rawData),...
      '-N0-TAN','-N4-TAN','-N3-TAN','-MV-TAN','-N0-RAD','-N4-RAD',...
      '-N3-RAD','-MV-RAD');
-meg_data            = ft_selectdata(cfg,rawData_detrend);
+meg_data            = ft_selectdata(cfg,rawData);
 
 %%
 data = reference_channels.trial{1};
@@ -186,11 +184,11 @@ cfg.channel = vertcat(ft_channelselection_opm('MEG',rawData),...
      '-N0-TAN','-N4-TAN','-N3-TAN','-MV-TAN','-N0-RAD','-N4-RAD',...
      '-N3-RAD','-MV-RAD');
 cfg.refchannel = 'MEGREF';
-cfg.filter_ref = [0 2; 2 30;30 40; 40 60; 70 90];
+cfg.filter_ref = [2 30;30 40; 40 60; 70 90];
 cfg.derivative = 'yes';
 cfg.return_all = 'no';
 cfg.winsize    = 50;
-[data_out2] = ft_opm_synth_gradiometer_window(cfg,rawData_detrend);
+[data_out2] = ft_opm_synth_gradiometer_window(cfg,rawData);
 
 
 cfg                 = [];
@@ -199,7 +197,7 @@ cfg.trial_length    = 10;
 cfg.method          = 'tim';
 cfg.foi             = [0 150];
 cfg.plot            = 'yes';
-pow                 = ft_opm_psd(cfg,data_out);
+pow                 = ft_opm_psd(cfg,data_out2);
 
 
 cfg                 = [];
@@ -218,6 +216,104 @@ cfg.channel = vertcat(ft_channelselection_opm('MEG',rawData),...
 cfg.viewmode = 'vertical';
 cfg.blocksize = 10;
 ft_databrowser(cfg,rawData_detrend);
+
+
+
+
+%% Now let's try ICA!
+disp('About to run ICA using the Runica method')
+cfg            = [];
+cfg.channel    = 'all'
+cfg.method     = 'fastica';
+cfg.numcomponent = 24;
+cfg.feedback     = 'textbar';
+comp           = ft_componentanalysis(cfg, data_out2);
+
+%% Plot PSD
+
+u = comp.trial{1};
+
+for i = 1:size(u,1)
+    ica_spare = [];
+    ica_spare = reference_channels;
+    ica_spare.label = {num2str(i)};
+    ica_spare.trial{1} = squeeze(u(i,:));
+    
+    %ica_spare.time{1} = reference_channels.time{1}(1:size(u,2));  
+    
+    cfg                 = [];
+    cfg.channel         = 'all';
+    cfg.trial_length    = 10;
+    cfg.method          = 'tim';
+    cfg.foi             = [0 150];
+    cfg.plot            = 'yes';
+    pow                 = ft_opm_psd(cfg,ica_spare);
+    title(num2str(i));
+    ylim([1 1e5]);
+%     cfg= [];
+%     cfg.viewmode = 'vertical';
+%     cfg.blocksize = 10;
+%     ft_databrowser(cfg,ica_spare);
+    
+end
+
+
+
+
+
+
+
+
+
+
+% Display Components - change layout as needed
+cfg = [];
+% if strcmp(site,'Aston')
+% cfg.layout = 'neuromag306mag.lay';
+% elseif strcmp(site,'MQ')
+%     cfg.layout = lay;
+% end
+cfg.viewmode = 'component';
+cfg.compscale = 'local';
+% if strcmp(site,'MQ')
+% cfg.ylim = [ -2.8015e-11  5.7606e-11 ];
+% elseif strcmp(site,'Aston')
+%     cfg.ylim = [ -4.5962e-10  4.5962e-10];
+% end
+cfg.position = [1 1 800 700];
+cfg.blocksize = 15;
+ft_databrowser(cfg, comp);
+
+ft_hastoolbox('brewermap',1);
+colormap123 = colormap(flipud(brewermap(64,'RdBu')));
+
+cfg= [];
+if strcmp(site,'Aston')
+cfg.layout = 'neuromag306mag.lay';
+elseif strcmp(site,'MQ')
+    cfg.layout = lay;
+end
+cfg.blocksize = 6;
+cfg.zlim = 'maxabs';
+cfg.colormap = colormap123;
+[rej_comp] = ft_icabrowser(cfg, comp);
+close all force
+
+%% The original data can now be reconstructed, excluding specified components
+% This asks the user to specify the components to be removed
+disp('Enter components in the form [1 2 3]')
+comp2remove = input('Which components would you like to remove?\n');
+cfg           = [];
+cfg.component = [comp2remove]; %these are the components to be removed
+data_clean    = ft_rejectcomponent(cfg, comp,data);
+
+
+
+
+
+
+
+
 
 
 
@@ -314,6 +410,11 @@ cfg             = [];
 cfg.viewmode    = 'vertical';
 cfg.colormode   = 'allblack';
 ft_databrowser(cfg,data);
+
+cfg             = [];
+cfg.poly_num    = 10;
+cfg.winsize     = [];
+data  = ft_robust_detrend(cfg,data);
 
 %% Load the csv file to know which stimuli was on screen
 csvfile = readtable([data_dir 'M170_RS_run_1_20200226_1141.csv']);
@@ -553,103 +654,103 @@ colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 % set(gca,'FontSize',14);
 % drawnow;
 % 
-% %% Do virtual electrode analysis
-% %%
-% % Now we compute nonlinear warping between MNI and
-% mri = ft_read_mri([data_dir 'mmsMQ0484_orig.img']);
-% mri.coordsys = 'neuromag';
-% 
-% cfg             = [];
-% cfg.template    = mri;
-% cfg.nonlinear   = 'yes';
-% norm            = ft_volumenormalise([],mri);
-% 
-% pos = [-28 -72 8];
-% 
-% % Now we warp the MNI coordinates using the nonlinear warping parameters
-% posback         = ft_warp_apply(norm.params,pos,'sn2individual');
-% % xyz positions in individual coordinates
-% pos_grid        = ft_warp_apply(pinv(norm.initial),posback);
-%     
-% %% Prepare Leadfield
-% cfg = [];
-% cfg.method='lcmv';
-% cfg.channel = data.label;
-% cfg.grid.pos = pos_grid;
-% cfg.grid.unit = 'mm';
-% cfg.headmodel = headmodel;
-% cfg.grad = rawData.grad;
-% %cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)
-% cfg.normalize       = 'yes' ; %Normalise Leadfield: 'yes' for beamformer
-% %cfg.normalizeparam  = 1;
-% lf_2 = ft_prepare_leadfield(cfg);
-% 
-% % make a figure of the single subject{i} headmodel, and grid positions
-% figure; hold on;
-% ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');
-% alpha 0.5; camlight;
-% ft_plot_mesh(lf_2.pos(lf_2.inside,:),'vertexsize',20,'vertexcolor','r');
-% ft_plot_sens(rawData.grad, 'style', 'r*'); view([0,0]);
-% 
-% 
-% cfg                    = [];
-% cfg.channel            = data.label;
-% cfg.grad               = rawData.grad;
-% cfg.method             = 'lcmv';
-% cfg.grid               = lf_2;
-% cfg.headmodel          = headmodel;
-% cfg.lcmv.keepfilter    = 'yes';
-% cfg.lcmv.fixedori      = 'yes';
-% cfg.lcmv.projectnoise  = 'yes';
-% %cfg.lcmv.weightnorm    = 'nai';
-% cfg.lcmv.lambda        = '5%';
-% sourceall              = ft_sourceanalysis(cfg, avg);
-% 
-% % Find filter from max point
-% filter = sourceall.avg.filter{1,1};
-% 
-% VE = [];
-% VE.label = {'max'};
-% VE.trialinfo = data.trialinfo;
-% VE.condition = data.condition;
-% for subs=1:(length(data.trialinfo))
-%     % note that this is the non-filtered "raw" data
-%     VE.time{subs}       = data.time{subs};
-%     VE.trial{subs}(1,:) = filter(1,:)*data.trial{subs}(:,:);
-% end
-% 
-% % Select data based on conditions
-% cfg                 = [];
-% cfg.trials          = contains(VE.condition,'Famous');
-% famous_faces        = ft_selectdata(cfg,VE);
-% cfg.trials          = contains(VE.condition,'Unfamiliar');
-% unfamiliar_faces    = ft_selectdata(cfg,VE);
-% cfg.trials          = contains(VE.condition,'Scrambled');
-% scrambled_faces     = ft_selectdata(cfg,VE);
-% 
-% 
-% % Append the face data together
-% faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);
-% 
-% % Perform timelockanalysis
-% cfg             = [];
-% avg_famous      = ft_timelockanalysis([],famous_faces);
-% avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);
-% avg_scrambled   = ft_timelockanalysis([],scrambled_faces);
-% avg_faces_all   = ft_timelockanalysis([],faces_all);
-% 
-% %% Plot each sensor in turn
-% cfg = [];
-% cfg.parameter = 'avg';
-% cfg.baseline = [-0.5 0];
-% cfg.showlegend    = 'yes';
-% cfg.linewidth = 2;
-% %cfg.ylim = [-250 250];
-% figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...
-%     avg_scrambled);
-% legend({'Famous';'Unfamiliar';'Scrambled'});
-% set(gca,'FontSize',20);
-% xlabel('Time (s)');
-% title('');
-% 
-% 
+%% Do virtual electrode analysis
+%%
+% Now we compute nonlinear warping between MNI and
+mri = ft_read_mri([data_dir 'mmsMQ0484_orig.img']);
+mri.coordsys = 'neuromag';
+
+cfg             = [];
+cfg.template    = mri;
+cfg.nonlinear   = 'yes';
+norm            = ft_volumenormalise([],mri);
+
+pos = [-28 -72 8];
+
+% Now we warp the MNI coordinates using the nonlinear warping parameters
+posback         = ft_warp_apply(norm.params,pos,'sn2individual');
+% xyz positions in individual coordinates
+pos_grid        = ft_warp_apply(pinv(norm.initial),posback);
+    
+%% Prepare Leadfield
+cfg = [];
+cfg.method='lcmv';
+cfg.channel = data.label;
+cfg.grid.pos = pos_grid;
+cfg.grid.unit = 'mm';
+cfg.headmodel = headmodel;
+cfg.grad = rawData.grad;
+%cfg.reducerank      = 2; %(default = 3 for EEG, 2 for MEG)
+cfg.normalize       = 'yes' ; %Normalise Leadfield: 'yes' for beamformer
+%cfg.normalizeparam  = 1;
+lf_2 = ft_prepare_leadfield(cfg);
+
+% make a figure of the single subject{i} headmodel, and grid positions
+figure; hold on;
+ft_plot_vol(headmodel,  'facecolor', 'cortex', 'edgecolor', 'none');
+alpha 0.5; camlight;
+ft_plot_mesh(lf_2.pos(lf_2.inside,:),'vertexsize',20,'vertexcolor','r');
+ft_plot_sens(rawData.grad, 'style', 'r*'); view([0,0]);
+
+
+cfg                    = [];
+cfg.channel            = data.label;
+cfg.grad               = rawData.grad;
+cfg.method             = 'lcmv';
+cfg.grid               = lf_2;
+cfg.headmodel          = headmodel;
+cfg.lcmv.keepfilter    = 'yes';
+cfg.lcmv.fixedori      = 'yes';
+cfg.lcmv.projectnoise  = 'yes';
+%cfg.lcmv.weightnorm    = 'nai';
+cfg.lcmv.lambda        = '5%';
+sourceall              = ft_sourceanalysis(cfg, avg);
+
+% Find filter from max point
+filter = sourceall.avg.filter{1,1};
+
+VE = [];
+VE.label = {'max'};
+VE.trialinfo = data.trialinfo;
+VE.condition = data.condition;
+for subs=1:(length(data.trialinfo))
+    % note that this is the non-filtered "raw" data
+    VE.time{subs}       = data.time{subs};
+    VE.trial{subs}(1,:) = filter(1,:)*data.trial{subs}(:,:);
+end
+
+% Select data based on conditions
+cfg                 = [];
+cfg.trials          = contains(VE.condition,'Famous');
+famous_faces        = ft_selectdata(cfg,VE);
+cfg.trials          = contains(VE.condition,'Unfamiliar');
+unfamiliar_faces    = ft_selectdata(cfg,VE);
+cfg.trials          = contains(VE.condition,'Scrambled');
+scrambled_faces     = ft_selectdata(cfg,VE);
+
+
+% Append the face data together
+faces_all = ft_appenddata([], famous_faces, unfamiliar_faces);
+
+% Perform timelockanalysis
+cfg             = [];
+avg_famous      = ft_timelockanalysis([],famous_faces);
+avg_unfamiliar  = ft_timelockanalysis([],unfamiliar_faces);
+avg_scrambled   = ft_timelockanalysis([],scrambled_faces);
+avg_faces_all   = ft_timelockanalysis([],faces_all);
+
+%% Plot each sensor in turn
+cfg = [];
+cfg.parameter = 'avg';
+cfg.baseline = [-0.5 0];
+cfg.showlegend    = 'yes';
+cfg.linewidth = 2;
+%cfg.ylim = [-250 250];
+figure; ft_singleplotER(cfg,avg_famous, avg_unfamiliar,...
+    avg_scrambled);
+legend({'Famous';'Unfamiliar';'Scrambled'});
+set(gca,'FontSize',20);
+xlabel('Time (s)');
+title('');
+
+

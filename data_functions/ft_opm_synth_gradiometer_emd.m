@@ -141,6 +141,8 @@ for tr = 1:numel(ref_data.trial)
         
     end
     
+    reference = u';
+    
     
     
     
