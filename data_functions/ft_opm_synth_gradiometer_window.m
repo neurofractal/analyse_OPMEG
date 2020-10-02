@@ -1,4 +1,4 @@
-function [data_out] = ft_opm_synth_gradiometer_window(cfg,data_in)
+function [data_out] = ft_opm_synth_gradiometer_window(cfg,data_in,data_ref_in)
 % Function to regress reference signals from the optically-pumped
 % magnetoencephalography (OPMEG) data acquired from the
 % UCL Wellcome Centre for Neuroimaging. 
@@ -29,6 +29,11 @@ function [data_out] = ft_opm_synth_gradiometer_window(cfg,data_in)
 
 % Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk)
 %__________________________________________________________________________
+
+%%
+if nargin<3
+    data_ref_in = data_in;
+end
 
 %% Set default values
 if ~isfield(cfg, 'channel')
@@ -84,8 +89,8 @@ fprintf('Selected %2d data channels\n',length(meg_data.label));
 
 % Reference data
 cfg2                = [];
-cfg2.channel        = ft_channelselection_opm(refchannel,data_in);
-ref_data            = ft_selectdata(cfg2,data_in);
+cfg2.channel        = ft_channelselection_opm(refchannel,data_ref_in);
+ref_data            = ft_selectdata(cfg2,data_ref_in);
 fprintf('Selected %2d reference channels\n',length(ref_data.label));
 
 % Save data for later
