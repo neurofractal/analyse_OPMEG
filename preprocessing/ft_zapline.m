@@ -34,14 +34,14 @@ if ~isfield(cfg, 'n_remove')
 end
 
 if ~isfield(cfg, 'truncate_PC')
-    truncate_PC = length(data)-1;
+    truncate_PC = size(data.trial{1},2)-1;
 end
 
 %%
 data_zapline    = data;
 line_noise      = cfg.ln_freq/data.fsample;
 p=[];
-p.nkeep=cfg.truncate_PC; 
+p.nkeep=truncate_PC; 
 
 % For every trial
 disp('Zaplining...');

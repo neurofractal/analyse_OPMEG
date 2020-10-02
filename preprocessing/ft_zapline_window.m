@@ -43,7 +43,7 @@ if ~isfield(cfg, 'n_remove')
 end
 
 if ~isfield(cfg, 'truncate_PC')
-    cfg.truncate_PC = length(data)-1;
+  cfg.truncate_PC = size(data.trial{1},2)-1;
 end
 
 %%
