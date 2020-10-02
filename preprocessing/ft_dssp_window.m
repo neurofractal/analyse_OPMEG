@@ -5,8 +5,12 @@ function [data_dssp] = ft_dssp_window(cfg,datain)
 % EXAMPLE USEAGE:   data_dssp = ft_dssp_window(cfg,data)
 % ...where, cfg is the input structure
 % 
-%   cfg.sourcemodel      = structure, source model with precomputed leadfields, see FT_PREPARE_LEADFIELD
-%   cfg.dssp             = structure with parameters that determine the behavior of the algorithm
+%   cfg.sourcemodel      = structure, source model with precomputed 
+%                          leadfields, see FT_PREPARE_LEADFIELD
+%   cfg.winsize          = size of the window used for
+%                          (in seconds, default = 10)
+%   cfg.dssp             = structure with parameters that determine the
+%                          behavior of the algorithm
 %   cfg.dssp.n_space     = 'all', or scalar. Number of dimensions for the
 %                          initial spatial projection.
 %   cfg.dssp.n_in        = 'all', or scalar. Number of dimensions of the
@@ -17,12 +21,23 @@ function [data_dssp] = ft_dssp_window(cfg,datain)
 %                          value is an integer>=1), or threshold for the
 %                          included eigenvalues (if value<1), determining
 %                          the dimensionality of the intersection.
-%   cfg.winsize          = size of the window you wish to apply the DSSP
-%                          (in seconds, default = 10)
 %__________________________________________________________________________
-% Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
-
-% Authors: Robert Seymour      (rob.seymour@ucl.ac.uk) 
+% Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging. 
+%
+% N.B. For the dssp.m function, all rights are reserved 
+% by Signal Analysis Inc. (http://www.signalanalysis.jp/myweb/index.html)
+%
+% If you use this algorithm, please reference:
+%
+% 1. Sekihara K, Kawabata Y, Ushio S, Sumiya S, Kawabata S, Adachi Y and 
+% Nagarajan S S 2016 Dual signal subspace projection (DSSP): a novel 
+% algorithm for removing large interference in biomagnetic measurements 
+% J. Neural Eng. 13 036007
+%
+% 2. The Github repository: https://github.com/neurofractal/analyse_OPMEG
+%
+% Code was adapted for OPM-MEG data and the sliding window approach was
+% implemented by Robert Seymour (rob.seymour@ucl.ac.uk) 
 %__________________________________________________________________________
 
 % these are used by the ft_preamble/ft_postamble function and scripts
@@ -55,6 +70,7 @@ cfg = ft_checkconfig(cfg, 'renamed', {'grid',    'sourcemodel'});
 cfg.trials       = ft_getopt(cfg, 'trials',  'all', 1);
 cfg.channel      = ft_getopt(cfg, 'channel', 'all');
 cfg.sourcemodel  = ft_getopt(cfg, 'sourcemodel');
+cfg.winsize      = ft_getopt(cfg, 'winsize', 10); % window size
 cfg.dssp         = ft_getopt(cfg, 'dssp');         % sub-structure to hold the parameters
 cfg.dssp.n_space = ft_getopt(cfg.dssp, 'n_space', 'all'); % number of spatial components to retain from the Gram matrix
 cfg.dssp.n_in    = ft_getopt(cfg.dssp, 'n_in', 'all');    % dimensionality of the Bin subspace to be used for the computation of the intersection
@@ -92,7 +108,8 @@ G  = lf*lf';
 
 % Calculate window size in terms of number of data points
 wsize = cfg.winsize*datain.fsample;
-fprintf('Using %d data-points per window\n',wsize);
+fprintf('Using %ds of data (%d data-points) per window\n',cfg.winsize,...
+    wsize);
 
 % Make copy of the data
 data_dssp    = datain;
@@ -114,20 +131,16 @@ for trial = 1:length(datain.trial)
     
     % Start at 0
     offset=0;
+    
+        
+    % Display progress using ft_progress
+    ft_progress('init', 'etf', 'Applying DSSP...')
     while true
-        disp(offset);
+        ft_progress(offset/size(x,2))        
         
         start=offset+1;
         stop=min(size(x,2),offset+wsize);
         
-        % if not enough valid samples grow window:
-        counter=5;
-        while any (sum(min(w(start:stop),1))) <wsize
-            if counter <= 0 ; break; end
-            start=max(1,start-wsize/2);
-            stop=min(size(x,2),stop+wsize/2);
-            counter=counter-1;
-        end
         if rem(stop-start+1,2)==1; stop=stop-1; end
         wsize2=stop-start+1;
         
@@ -157,7 +170,8 @@ for trial = 1:length(datain.trial)
         % If we have reached the end of the data BREAK 
         if offset>size(x,2)-wsize/2; break; end
     end
-    
+    ft_progress('close')
+
     % Adjust triangular weighting
     y=bsxfun(@times,y,1./a); 
     % Find any NaN values and convert to 0
