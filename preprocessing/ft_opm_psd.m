@@ -279,9 +279,9 @@ switch method_for_fft
             ax.FontSize = 20;
             ax.TickLength = [0.02 0.02];
             
-            xlabel('Frequency (Hz)','FontSize',30)
+            xlabel('Frequency (Hz)','FontSize',25)
             labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-            ylabel(labY,'interpreter','latex','FontSize',30)
+            ylabel(labY,'interpreter','latex','FontSize',25)
             
             % Adjust limits based on cfg.foi
             xlim([cfg.foi(1), cfg.foi(end)]);
