@@ -1,4 +1,18 @@
 function [sourceI] = interp_to_MNI(source,normalise,spm_brain)
+%__________________________________________________________________________
+% Function to apply interpolate source power from individual grid to 
+% FT/SPM inbuilt MNI 5mm grid
+%
+% EXAMPLE USEAGE:   [sourceI] = interp_to_MNI(source,normalise,spm_brain)
+% 
+% INPUTS:
+% - source      = output from ft_sourceanalysis
+% - normalise   = output from ft_volumenormalise
+% - spm_brain   = SPM brain loaded using ft_read_mri
+%__________________________________________________________________________
+% Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging. 
+%
+% Author:  Robert Seymour (rob.seymour@ucl.ac.uk) 
 
 % First load the 5mm template_grid (currented hard-coded.. could change)
 [t, r] = ft_version;
