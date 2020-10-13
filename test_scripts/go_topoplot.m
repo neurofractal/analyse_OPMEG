@@ -1,6 +1,6 @@
 function h = go_topoplot(cfg,dat)
 
-if isfile(cfg.layout)
+if ~isstruct(cfg.layout)
     load(cfg.layout);
     cfg.layout = layout;
     clear layout
