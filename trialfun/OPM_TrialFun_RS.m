@@ -31,7 +31,7 @@ eventCont           = rawData.trial{1}(pos_of_trig,:);
 time                = rawData.time{1};
 sample              = 1:length(time);
 % convert to binary
-eventDisc           = (eventCont > 20000);
+eventDisc           = (eventCont > 3);
 
 % find first sample. first find differences
 tmp                 = eventDisc - [0,eventDisc(1:end-1)];
