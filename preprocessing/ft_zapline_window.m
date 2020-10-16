@@ -1,4 +1,4 @@
-function [data_zapline] = ft_zapline_window(cfg,data)
+function [data_zapline, noise_zapline] = ft_zapline_window(cfg,data)
 % Function to apply the Zapline algorithm (via NoiseTools) on overlapping
 % windows of electrophysiological data arranged in a Fieldtrip structure
 % (Please cite the original paper: 
@@ -137,7 +137,8 @@ for trial = 1:length(data.trial)
     
     % Put the data back into Fieldtrip structure
     data_zapline.trial{trial} = transpose(y);
-    
+    noise_zapline = data_zapline;
+    noise_zapline.trial{trial} = transpose(yy);
     if strcmp(cfg.plot,'yes') % plot function from nt_zapline
         % Default values from nt_zapline.
         p.nfft=1024;
