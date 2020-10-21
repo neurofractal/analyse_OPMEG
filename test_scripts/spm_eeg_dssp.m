@@ -10,6 +10,7 @@ spm('FnBanner', mfilename,SVNrev);
 %--------------------------------------------------------------------------
 if ~isfield(S, 'D'),                error('Please specify a dataset');  end
 if ~isfield(S, 'winsize'),              S.winsize = 10;                 end
+if ~isfield(S, 'ssp'),                  S.ssp = 0;                      end
 if ~isfield(S, 'dssp'),                 S.dssp = struct;                end
 if ~isfield(S.dssp,'n_space'),          S.dssp.n_space = 'all';         end
 if ~isfield(S.dssp,'n_in'),             S.dssp.n_in = 'all';            end
@@ -39,7 +40,7 @@ else
 end
 
 wsize = S.winsize*D.fsample;
-fprintf('%-40s: %30s\n','Samples per window',num2str(wsize));                       
+fprintf('%-40s: %30s\n','Samples per window',num2str(wsize));
 
 
 % Load data into memory for faster computation later
@@ -86,7 +87,7 @@ for ii = 1:ntrials
         % Do DSSP
         yy = ...
             dssp(x(:,start:stop), G, S.dssp.n_in, S.dssp.n_out,...
-            S.dssp.n_space, S.dssp.n_intersect);
+            S.dssp.n_space, S.dssp.n_intersect, S.ssp);
         
         % triangular weighting
         if start==1
@@ -150,7 +151,7 @@ spm_progress_bar('Clear');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % subfunctions for the computation of the projection matrix
 % kindly provided by Kensuke, and adjusted a bit by Jan-Mathijs
-function [Bclean, Ae, Nee, Nspace, Sout, Sin, Sspace, S] = dssp(B, G, Nin, Nout, Nspace, Nee)
+function [Bclean, Ae, Nee, Nspace, Sout, Sin, Sspace, S] = dssp(B, G, Nin, Nout, Nspace, Nee, ssp_only)
 
 % Nc: number of sensors
 % Nt: number of time points
@@ -204,8 +205,12 @@ Bout = (eye(size(USUS))-USUS) * B;
 %[AeAe, Nee] = CSP01(Bin, Bout, Nout, Nin, Nee);
 %Bclean      = B*(eye(size(AeAe))-AeAe);
 
-[Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee);
-Bclean      = B - (B*Ae)*Ae'; % avoid computation of Ae*Ae'
+if ~ssp_only
+    Bclean = Bin;
+else
+    [Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee);
+    Bclean      = B - (B*Ae)*Ae'; % avoid computation of Ae*Ae'
+end
 
 function [Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee)
 %
