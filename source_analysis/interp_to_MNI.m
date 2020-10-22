@@ -44,5 +44,5 @@ cfg.interpmethod = 'nearest';
 % Interpolate from individual to template grid
 sourceI  = ft_sourceinterpolate(cfg, source, template_grid);
 % Interpolate onto spm brain
-sourceI  = ft_sourceinterpolate(cfg, source, spm_brain);
+sourceI  = ft_sourceinterpolate(cfg, sourceI, spm_brain);
 
