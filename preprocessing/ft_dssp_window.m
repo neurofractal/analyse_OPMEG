@@ -9,6 +9,8 @@ function [data_dssp] = ft_dssp_window(cfg,datain)
 %                          leadfields, see FT_PREPARE_LEADFIELD
 %   cfg.winsize          = size of the window used for
 %                          (in seconds, default = 10)
+%   cfg.do_corr          = Should we remove common temporal correlation
+%                          between the subspaces? (Default = 'yes').
 %   cfg.dssp             = structure with parameters that determine the
 %                          behavior of the algorithm
 %   cfg.dssp.n_space     = 'all', or scalar. Number of dimensions for the
@@ -77,6 +79,14 @@ cfg.dssp.n_in    = ft_getopt(cfg.dssp, 'n_in', 'all');    % dimensionality of th
 cfg.dssp.n_out   = ft_getopt(cfg.dssp, 'n_out', 'all');   % dimensionality of the Bout subspace to be used for the computation of the intersection
 cfg.dssp.n_intersect = ft_getopt(cfg.dssp, 'n_intersect', 0.9); % dimensionality of the intersection
 cfg.output       = ft_getopt(cfg, 'output', 'original');
+cfg.do_corr       = ft_getopt(cfg, 'do_corr', 'yes');
+
+% Should we remove common temporal intersection between the two subspaces
+if strcmp(cfg.do_corr,'yes')
+    do_corr = 1;
+else
+    do_corr = 0;
+end
 
 % select channels and trials of interest, by default this will select all channels and trials
 tmpcfg = keepfields(cfg, {'trials', 'channel', 'showcallinfo'});
@@ -145,9 +155,9 @@ for trial = 1:length(datain.trial)
         wsize2=stop-start+1;
         
         % Do DSSP
-        [yy, Ae, N, Nspace, Sout, Sin, Sspace, S] = ...
+        [yy, Ae, Nee, Nspace, Sout, Sin, Sspace, S] = ...
             dssp(x(:,start:stop), G, cfg.dssp.n_in, cfg.dssp.n_out,...
-            cfg.dssp.n_space, cfg.dssp.n_intersect);
+            cfg.dssp.n_space, cfg.dssp.n_intersect,offset,do_corr);
         
         % triangular weighting
         if start==1

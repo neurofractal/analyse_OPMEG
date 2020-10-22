@@ -1,7 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % subfunctions for the computation of the projection matrix
 % kindly provided by Kensuke, and adjusted a bit by Jan-Mathijs
-function [Bclean, Ae, Nee, Nspace, Sout, Sin, Sspace, S] = dssp(B, G, Nin, Nout, Nspace, Nee)
+function [Bclean, Ae, Nee, Nspace, Sout, Sin, Sspace, S] ...
+    = dssp(B, G, Nin, Nout, Nspace, Nee,offset,do_corr)
 
 % Nc: number of sensors
 % Nt: number of time points
@@ -39,6 +40,9 @@ elseif ischar(Nspace) && isequal(Nspace, 'interactive')
   figure, plot(log10(Sspace),'-o');
   Nspace = input('enter spatial dimension of the ROI subspace: ');
 elseif ischar(Nspace) && isequal(Nspace, 'all')
+    if offset == 0
+        figure; plot(log10(Sspace),'-o');
+    end
   Nspace = find(Sspace./Sspace(1)>1e5*eps, 1, 'last');
 end
 %fprintf('Using %d spatial dimensions\n', Nspace);
@@ -54,9 +58,17 @@ Bout = (eye(size(USUS))-USUS) * B;
 % create the temporal subspace projector and apply it to the data
 %[AeAe, Nee] = CSP01(Bin, Bout, Nout, Nin, Nee);
 %Bclean      = B*(eye(size(AeAe))-AeAe);
-
-[Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee);
-Bclean      = B - (B*Ae)*Ae'; % avoid computation of Ae*Ae'
+if do_corr
+    [Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee);
+    Bclean      = B - (B*Ae)*Ae'; % avoid computation of Ae*Ae'
+else
+    Bclean = Bin;
+    Ae = []; Nee = []; Nspace = []; Sout= []; Sin = [];
+    Sspace =[]; S = [];
+    if offset == 0
+        disp('NOT removing the common temporal subspace of the two subspaces');
+    end
+end
 
 function [Ae, Nee, Sout, Sin, S] = CSP01(Bin, Bout, Nin, Nout, Nee)
 %
@@ -124,7 +136,6 @@ elseif ischar(Nee) && strcmp(Nee, 'interactive')
   figure, plot(S,'-o');
   Nee  = input('enter dimension of the intersection: ');
 elseif Nee<1
-  % treat a numeric value < 1 as a threshold
   Nee = find(S>Nee,1,'last');
   if isempty(Nee), Nee = 1; end
 end
