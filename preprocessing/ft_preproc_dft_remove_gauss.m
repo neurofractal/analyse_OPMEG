@@ -51,11 +51,14 @@ fftFreq             = fftFreq(1:nsamples/2+1);
 avgFftPow           = median(fftPow,1);
 welchPow            = [];
 % To get a better estimation, use the Welch method
+welchPow            = zeros(length(data.label),length(fftFreq));
 for chanIdx = 1:length(data.label)
     if chanIdx == 1
-        [welchPow(chanIdx,:), welchFreq]   = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        [welchTmp, welchFreq]       = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        welchPow(chanIdx,:)         = interp1(welchFreq,welchTmp,fftFreq);
     else
-        welchPow(chanIdx,:)                = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        welchTmp                    = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        welchPow(chanIdx,:)         = interp1(welchFreq,welchTmp,fftFreq);
     end
 end
 
@@ -68,11 +71,11 @@ scaledWelchPow  = scaledWelchPow*(window'*window);
 scaledWelchPow  = sqrt(scaledWelchPow);  
 avgWelchPow     = median(scaledWelchPow,1);
 
-% Interp welch to fft freq resolution
-interpWelchPow  = interp1(welchFreq,avgWelchPow,fftFreq);
+% % Interp welch to fft freq resolution
+% interpWelchPow  = interp1(welchFreq,avgWelchPow,fftFreq);
 
-% % Debug plot
-% plot(fftFreq,avgFftPow,fftFreq,interpWelchPow,'r');
+% Debug plot
+% plot(fftFreq,avgFftPow,fftFreq,avgWelchPow,'r');
 % set(gca, 'YScale', 'log')
 
 % Tidy up
@@ -81,9 +84,9 @@ clear timeSeries samplingFreq nsamples
 % Select pow data for the foi.
 foiIdx            	= ~(fftFreq < cfg.foi(1) | fftFreq > cfg.foi(2));
 if strcmp(cfg.log,'yes')
-    avgFftPowFOI           = log(interpWelchPow(foiIdx));
+    avgFftPowFOI           = log(avgWelchPow(foiIdx));
 elseif strcmp(cfg.log,'no')
-    avgFftPowFOI           = interpWelchPow(foiIdx);
+    avgFftPowFOI           = avgWelchPow(foiIdx);
 end
 freqFOI             = fftFreq(foiIdx);
 
@@ -218,10 +221,12 @@ switch cfg.independentPeaks
             
             if strcmp(cfg.log,'yes')
                 % Get the chan avg data for those bounds.
-                neighbourData               = log(fftPow(:,neighbourFreqIndices));
+                neighbourData               = log(scaledWelchPow(:,neighbourFreqIndices));
+                fftNeighbourData            = log(fftPow(:,neighbourFreqIndices));
             elseif strcmp(cfg.log,'no')
                 % Get the chan avg data for those bounds.
-                neighbourData               = fftPow(:,neighbourFreqIndices);
+                neighbourData               = scaledWelchPow(:,neighbourFreqIndices);
+                fftNeighbourData            = fftPow(:,neighbourFreqIndices);
             end
 
             %% First fit the peak with slope to each channel independently
@@ -291,6 +296,23 @@ switch cfg.independentPeaks
                         % Linear interpolation across the peak.
                         replacementData         = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
                 end
+                
+%                 debug plots
+%                 subplot(3,1,1);
+%                 hold on
+%                 plot(neighbourFreqIndices, neighbourData)
+%                 plot(fittedModel)
+%                 hold off
+%                 subplot(3,1,2);
+%                 hold on
+%                 plot(indicesToReplace,replacementData)
+%                 plot(fittedModel)
+%                 hold off
+%                 subplot(3,1,3);
+%                 hold on
+%                 plot(fittedModel)
+%                 plot(bestGuess)
+%                 hold off
                 
 %                 replacementData = log2(replacementData);
                 
