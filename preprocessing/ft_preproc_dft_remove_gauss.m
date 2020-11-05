@@ -34,8 +34,6 @@ function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
 %                               fitting.
 %   cfg.strength            = g multiplier width to remove. ELABORATE
-%   cfg.trialLength         = epoch length in seconds. Determines the
-%                               smoothness of data for peak identifying.
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
@@ -46,20 +44,46 @@ fftFreq             = samplingFreq * linspace(0, 1, nsamples);
 % Run the fft
 fftData             = fft(timeSeries,nsamples,2);
 
-% Get pow
-fftPow              = abs(fftData);
+% Get real pow
+fftPow              = abs(fftData).^2;
+fftPow              = fftPow(:,1:nsamples/2+1);
+fftFreq             = fftFreq(1:nsamples/2+1);
 avgFftPow           = median(fftPow,1);
+welchPow            = [];
+% To get a better estimation, use the Welch method
+for chanIdx = 1:length(data.label)
+    if chanIdx == 1
+        [welchPow(chanIdx,:), welchFreq]   = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+    else
+        welchPow(chanIdx,:)                = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+    end
+end
+
+% Put Welch in the same scale as the fft
+window          = hanning(nsamples);
+scaledWelchPow  = welchPow;
+scaledWelchPow  = scaledWelchPow*samplingFreq;
+scaledWelchPow  = scaledWelchPow/2;
+scaledWelchPow  = scaledWelchPow*(window'*window);
+% scaledWelchPow  = sqrt(scaledWelchPow);  
+avgWelchPow     = median(scaledWelchPow,1);
+
+% Interp welch to fft freq resolution
+interpWelchPow  = interp1(welchFreq,avgWelchPow,fftFreq);
+
+% % Debug plot
+% plot(fftFreq,avgFftPow,fftFreq,interpWelchPow,'r');
+
 
 % Tidy up
 clear timeSeries samplingFreq nsamples 
 
 % Select pow data for the foi.
 foiIdx            	= ~(fftFreq < cfg.foi(1) | fftFreq > cfg.foi(2));
-avgFftPowFOI        = avgFftPow(foiIdx);
 if strcmp(cfg.log,'yes')
-    avgFftPowFOI           = log(avgFftPow(foiIdx));
+    avgFftPowFOI           = log(interpWelchPow(foiIdx));
 elseif strcmp(cfg.log,'no')
-    avgFftPowFOI           = avgFftPow(foiIdx);
+    avgFftPowFOI           = interpWelchPow(foiIdx);
 end
 freqFOI             = fftFreq(foiIdx);
 
