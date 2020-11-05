@@ -45,7 +45,7 @@ fftFreq             = samplingFreq * linspace(0, 1, nsamples);
 fftData             = fft(timeSeries,nsamples,2);
 
 % Get real pow
-fftPow              = abs(fftData).^2;
+fftPow              = abs(fftData);
 fftPow              = fftPow(:,1:nsamples/2+1);
 fftFreq             = fftFreq(1:nsamples/2+1);
 avgFftPow           = median(fftPow,1);
@@ -63,9 +63,9 @@ end
 window          = hanning(nsamples);
 scaledWelchPow  = welchPow;
 scaledWelchPow  = scaledWelchPow*samplingFreq;
-scaledWelchPow  = scaledWelchPow/2;
+% scaledWelchPow  = scaledWelchPow/2;
 scaledWelchPow  = scaledWelchPow*(window'*window);
-% scaledWelchPow  = sqrt(scaledWelchPow);  
+scaledWelchPow  = sqrt(scaledWelchPow);  
 avgWelchPow     = median(scaledWelchPow,1);
 
 % Interp welch to fft freq resolution
@@ -73,7 +73,7 @@ interpWelchPow  = interp1(welchFreq,avgWelchPow,fftFreq);
 
 % % Debug plot
 % plot(fftFreq,avgFftPow,fftFreq,interpWelchPow,'r');
-
+% set(gca, 'YScale', 'log')
 
 % Tidy up
 clear timeSeries samplingFreq nsamples 
@@ -118,11 +118,24 @@ while firstRun || changePeaks
         [~,peakFreq,peakWidth,peakProminence]  = findpeaks(avgFftPowFOI,freqFOI,'MinPeakProminence',minPeakProminence,'WidthReference','halfprom');
     end
 
+    
     % Show user the peaks
     if strcmp(cfg.independentPeaks,'yes')
         findpeaks(avgFftPowFOI,freqFOI,'MinPeakProminence',minPeakProminence,'Annotate','extents','MinPeakDistance',cfg.minPeakDistance,'WidthReference','halfprom');
     elseif strcmp(cfg.independentPeaks,'no')
         findpeaks(avgFftPowFOI,freqFOI,'MinPeakProminence',minPeakProminence,'Annotate','extents','WidthReference','halfprom');
+    end
+    
+    % If the peaks are independent then the centre of the width should be a
+    % better estimate of the peak centre.
+    if strcmp(cfg.independentPeaks,'yes')
+       % Workaround because findpeaks does not output this info.
+       currentAxes          = gca;
+       currentLines         = currentAxes.Children;
+       widthLines           = currentLines(1).XData';
+       widthLines           = widthLines(~isnan(widthLines));
+       widthLines           = transpose(reshape(widthLines,2,[]));
+       peakFreq             = mean(widthLines,2);
     end
     
     % Ask if the user wants to change the number of peaks
@@ -278,6 +291,9 @@ switch cfg.independentPeaks
                         % Linear interpolation across the peak.
                         replacementData         = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
                 end
+                
+%                 replacementData = log2(replacementData);
+                
                 % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
                 if strcmp(cfg.log,'yes')
                     fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
