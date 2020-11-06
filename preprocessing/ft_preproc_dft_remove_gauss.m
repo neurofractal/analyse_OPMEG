@@ -1,4 +1,4 @@
-function [filt, filteredFrequencies] = ft_preproc_dft_remove_gauss(cfg, data)
+function [filt, filtFreq] = ft_preproc_dft_remove_gauss(cfg, data)
 % Function to find peaks in spectrum, model their shape and remove them 
 % before transforming back into time domain. 
 % 
@@ -21,7 +21,7 @@ function [filt, filteredFrequencies] = ft_preproc_dft_remove_gauss(cfg, data)
 %       (iDFT). 
 %
 % Use as
-%   [filt] = ft_preproc_dft_remove_gause(cfg, data)
+%   [filt, filtFreq] = ft_preproc_dft_remove_gause(cfg, data)
 %   where
 %   data                    = Fieldtrip data structure with continuous
 %                               data. Usually raw data.
@@ -228,7 +228,7 @@ end
 %% Remove Gaussian component from amplitude in spectrum
 switch cfg.independentPeaks
     case 'yes'
-        filteredFrequencies        = zeros(length(peakFreq),2);
+        filtFreq        = zeros(length(peakFreq),2);
         for peakIdx = 1:length(peakFreq)
             %% Find the neighbourhood data around the peak
             neighbourLowerBound         = peakFreq(peakIdx) - (cfg.Neighwidth);
@@ -335,7 +335,7 @@ switch cfg.independentPeaks
             indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
             
             % Save the freq limits that have been modified. 
-            filteredFrequencies(peakIdx,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
+            filtFreq(peakIdx,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
 
             if length(indicesToReplace) > length(neighbourData(chanIdx,:))
                 ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
@@ -371,7 +371,7 @@ switch cfg.independentPeaks
             end
         end
     case 'no'
-        filteredFrequencies        = zeros(1,2);
+        filtFreq        = zeros(1,2);
 
         % Check there are 2 or more peaks
         if length(peakFreq) < 2
@@ -497,7 +497,7 @@ switch cfg.independentPeaks
         indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
         
         
-        filteredFrequencies(1,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
+        filtFreq(1,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
 
         if length(indicesToReplace) > length(neighbourData)
             ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
