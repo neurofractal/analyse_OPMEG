@@ -324,7 +324,7 @@ switch cfg.independentPeaks
             
             % Save the freq limits that have been modified. 
             filteredFrequencies(peakIdx,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
-            
+
             if length(indicesToReplace) > length(neighbourData(chanIdx,:))
                 ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
             end
@@ -359,6 +359,8 @@ switch cfg.independentPeaks
             end
         end
     case 'no'
+        filteredFrequencies        = zeros(1,2);
+
         % Check there are 2 or more peaks
         if length(peakFreq) < 2
             error('Only one peak found. Please set cfg.independentPeaks to yes');
@@ -418,8 +420,8 @@ switch cfg.independentPeaks
             % Fit two peaks with slope to the channel data.
             fittedModel     = fit(neighbourFreqIndices', neighbourChanData', twoPeaksWithSlope,...
                                 'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), b, c],...
-                                'Lower',[-inf, x0, -inf, -inf, -inf],...
-                                'Upper',[inf, x0, inf, inf, inf]);
+                                'Lower',[-inf, x0(1), -inf, -inf, x0(2), -inf, -inf, -inf],...
+                                'Upper',[inf, x0(1), inf, inf, x0(2), inf, inf, inf]);
 
             fitCoeffValue   = coeffvalues(fittedModel);
             fitCoeffNames   = coeffnames(fittedModel);
@@ -430,237 +432,97 @@ switch cfg.independentPeaks
             end
         end
         
+        % It might be worth using the maxG as a limit for the fitted
+        % model. 
+        medianG(1)        = median(abs(fittedStruct.g1));
+        iqrG(1)            = iqr(abs(fittedStruct.g1));
+        maxG(1)            = medianG(1) + 3*iqrG(1);
+        minG(1)            = abs(medianG(1) - 3*iqrG(1));
+        medianG(2)        = median(abs(fittedStruct.g2));
+        iqrG(2)            = iqr(abs(fittedStruct.g2));
+        maxG(2)            = medianG(2) + 3*iqrG(2);
+        minG(2)            = abs(medianG(2) - 3*iqrG(2));
         
-        fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', peakWithSlope,...
-                                'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), b, c]);
-        
-        
-        switch cfg.peakShape
-            case 'Guassian'
-                peakWithSlopeC   = @(A, x0, g, b, c, x)...
-                                    (A*exp(-2*((x-x0)/g).^2)) + (b*x) + c;
-                justPeakC        = @(A, x0, g, x)...
-                                    (A*exp(-2*((x-x0)/g).^2));
-            case 'Lorentzian'
-                peakWithSlopeC   = @(A, x0, g, b, c, x)...
-                                    ((A .* (g.^2))./((g.^2) + ((x - x0).^2))) + (b.*x) + c;
-                justPeakC        = @(A, x0, g, x)...
-                                    ((A .* (g.^2))./((g.^2) + ((x - x0).^2)));
-
-
-        end
-         twoLorentzianWithSlopeC = @(A1, A2, b, c, x)...
-            ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + (b*x) + c;
-
-        twoLorentzianC = @(A1, A2, x)...
-            ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2)));
-
-        
-        
-        
-
-%         fittedGuess = twoPeaksWithSlope(fittedStruct.A1,fittedStruct.x01,fittedStruct.g1,fittedStruct.A2,fittedStruct.x02,fittedStruct.g2,fittedStruct.b,fittedStruct.c,neighbourFreqIndices);
-%         bestGuess = twoPeaksWithSlope(A(1), x0(1), g(1), A(2), x0(2), g(2), b, c ,neighbourFreqIndices);
-
-        
-        % Fit to the avg of channel data to get best guess.
-%         if length(peakFreq) == 2
-
-%             fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', twoPeaksWithSlope,...
-%                                 'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), b, c]);
-% 
-%             % Get the width of fitted lorentzians.
-%             x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
-%             x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
-%             gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
-%             tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax)); % Magic number
-%             tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax)); % Magic number
-%             indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-% 
-%             if length(indicesToReplace) > length(neighbourData)
-%                 ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-%             end
-
-%         elseif length(peakFreq) == 3
-%             threeLorentzianWithSlope = @(A1, x01, g1, A2, x02, g2, A3, x03, g3, b, c, x)...
-%                     ((A1 .* (g1.^2))./((g1.^2) + ((x - x01).^2))) + ((A2 .* (g2.^2))./((g2.^2) + ((x - x02).^2))) + ((A3 * (g3.^2))./((g3.^2) + ((x - x03).^2))) + (b.*x) + c;
-% 
-%             threeLorentzian = @(A1, x01, g1, A2, x02, g2, A3, x03, g3, x)...
-%                     ((A1 .* (g1.^2))./((g1.^2) + ((x - x01).^2))) + ((A2 .* (g2.^2))./((g2.^2) + ((x - x02).^2))) + ((A3 * (g3.^2))./((g3.^2) + ((x - x03).^2)));
-% 
-%             fittedAvgModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlope,...
-%                                 'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), A(3), x0(3), g(3), b, c]);
-%             
-%             % Get the width of fitted lorentzians.
-%             x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-%             x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-%             gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2,fittedAvgModel.g3]));
-%             tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax));
-%             tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax));
-%         end
-
-        % Now apply per channel with some constants from the avg.  
         for chanIdx = 1:length(fftData(:,1))
-            if strcmp(cfg.log,'yes')
-                peakWidthData = log(abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
-                neighbourData   = log(abs(fftData(chanIdx,neighbourFreqIndices)));
-            elseif strcmp(cfg.log,'no')
-                peakWidthData = abs(fftData(chanIdx,widthFreqIndicesBound(1):widthFreqIndicesBound(end)));
-                neighbourData   = abs(fftData(chanIdx,neighbourFreqIndices));
+            % Guesses for fit (channel level)
+            neighbourChanData   = neighbourData(chanIdx,:);
+            % Slope
+            quarterLength   = round(length(neighbourChanData)/4);
+            endVals         = mean(neighbourChanData((end - quarterLength):end));
+            startVals       = mean(neighbourChanData(1:1+quarterLength));
+            eighthLength    = round(quarterLength/2);
+            b               = (endVals - startVals) / (neighbourFreqIndices(end - eighthLength) - neighbourFreqIndices(eighthLength));
+
+            % Constant - What is c equal to for the slope go through the middle?
+            middleValue     = mean([endVals,startVals]);
+            c               = middleValue - (b * mean(x0));
+
+            % Fit two peaks with slope to the channel data.
+            fittedModel     = fit(neighbourFreqIndices', neighbourChanData', twoPeaksWithSlope,...
+                                'StartPoint', [A(1), x0(1), g(1), A(2), x0(2), g(2), b, c],...
+                                'Lower',[-inf, x0(1), minG(1), -inf, x0(2), minG(2), -inf, -inf],...
+                                'Upper',[inf, x0(1), maxG(1), inf, x0(2), maxG(2), inf, inf]);
+
+            fitCoeffValue   = coeffvalues(fittedModel);
+            fitCoeffNames   = coeffnames(fittedModel);
+
+            % Dynamic naming seems to be the best way...
+            for coeffIdx = 1:length(fitCoeffNames)
+                fittedStruct.(fitCoeffNames{coeffIdx})(chanIdx) = fitCoeffValue(coeffIdx);
+            end
+        end
+        
+        maxG(1)            = max(abs(fittedStruct.g1));
+        maxG(2)             = max(abs(fittedStruct.g2));
+        maxG                = max(maxG);
+        
+        % Get the width of fitted lorentzians.
+        x0Min                   = min([fittedStruct.x01(1);fittedStruct.x02(1)]);
+        x0Max                   = max([fittedStruct.x01(1);fittedStruct.x02(1)]);
+        tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * maxG));
+        tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * maxG));
+
+        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+        
+        
+        filteredFrequencies(1,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
+
+        if length(indicesToReplace) > length(neighbourData)
+            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
+        end
+        
+        for chanIdx = 1:length(fftData(:,1))
+            switch cfg.method
+                case 'removePeak'
+                    % Get the lorentzian component.
+                    peaksOnly             = justTwoPeaks(fittedStruct.A1(chanIdx),fittedStruct.x01(chanIdx),fittedStruct.g1(chanIdx),fittedStruct.A2(chanIdx),fittedStruct.x02(chanIdx),fittedStruct.g2(chanIdx),indicesToReplace);
+
+                    % Remove it from the original data.
+                    replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - peaksOnly;
+
+
+                case 'leaveSlope'
+                    % Get the peak on a slope
+                    fittedModelData         = twoPeaksWithSlope(fittedStruct.A1(chanIdx),fittedStruct.x01(chanIdx),fittedStruct.g1(chanIdx),fittedStruct.A2(chanIdx),fittedStruct.x02(chanIdx),fittedStruct.g2(chanIdx),fittedStruct.b(chanIdx),fittedStruct.c(chanIdx),neighbourFreqIndices);
+                    tmpStartVal             = fittedModelData(tmpStartIdx);
+                    tmpEndVal               = fittedModelData(tmpEndIdx);
+
+                    % Linear interpolation across the peak.
+                    replacementData  = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
+
             end
             
-
-            if length(peakFreq) == 2
-                 twoLorentzianWithSlopeC = @(A1, A2, b, c, x)...
-                    ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + (b*x) + c;
-
-                twoLorentzianC = @(A1, A2, x)...
-                    ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2)));
-
-                switch cfg.method
-                    case 'leaveSlopeMinusGauss'
-                        
-                    case 'removeGauss'
-                        
-                    case 'removeLorentzian'
-                        % Fit a Lorentzian with slope
-                        fittedModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlopeC,...
-                                            'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c]);
-
-                        % Get the width of fitted lorentzians.
-                        x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
-                        x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
-                        gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
-                        tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax));
-                        tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax));
-
-                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                        
-                        if length(indicesToReplace) > length(neighbourData)
-                            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-                        end
-
-                        % Get the lorentzian component.
-                        onlyLorentz             = twoLorentzianC(fittedModel.A1, fittedModel.A2, indicesToReplace);
-
-                        % Remove it from the original data.
-                        replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
-
-                        bestGuess       = twoLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c,neighbourFreqIndices');
-
-                    case 'leaveSlopeMinusLorentzian'
-                        % Fit a Lorentzian with slope
-                        fittedModel     = fit(neighbourFreqIndices', neighbourData', twoLorentzianWithSlopeC,...
-                                            'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c]);
-
-                        % Get the width of fitted lorentzians.
-                        x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02]);
-                        x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02]);
-                        gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2]));
-                        tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax));
-                        tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax));
-
-                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                        
-                        if length(indicesToReplace) > length(neighbourData)
-                            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-                        end
-                        
-                        % Get just the slope
-                        replacementData         = justSlope(fittedModel.b,fittedModel.c, indicesToReplace);
-                        
-                        bestGuess       = twoLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.b, fittedAvgModel.c,neighbourFreqIndices');
-                end
-                
-            elseif length(peakFreq) == 3
-                threeLorentzianWithSlopeC = @(A1, A2, A3, b, c, x)...
-                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + ((A3 * (fittedAvgModel.g3^2))./((fittedAvgModel.g3^2) + ((x - fittedAvgModel.x03).^2))) + (b*x) + c;
-                
-                threeLorentzianC = @(A1, A2, A3, x)...
-                        ((A1 * (fittedAvgModel.g1^2))./((fittedAvgModel.g1^2) + ((x - fittedAvgModel.x01).^2))) + ((A2 * (fittedAvgModel.g2^2))./((fittedAvgModel.g2^2) + ((x - fittedAvgModel.x02).^2))) + ((A3 * (fittedAvgModel.g3^2))./((fittedAvgModel.g3^2) + ((x - fittedAvgModel.x03).^2)));
-
-                
-                
-                switch cfg.method
-                    case 'leaveSlopeMinusGauss'
-                        
-                    case 'removeGauss'
-                        
-                    case 'removeLorentzian'
-                        % Fit a Lorentzian with slope
-                        fittedModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlopeC,...
-                                    'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c]);
-
-                        % Get the width of fitted lorentzians.
-                        x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-                        x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-                        gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2,fittedAvgModel.g3]));
-                        tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax));
-                        tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax));
-                        
-                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                        
-                        if length(indicesToReplace) > length(neighbourData)
-                            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-                        end
-
-                        % Get the lorentzian component.
-                        onlyLorentz             = threeLorentzianC(fittedModel.A1, fittedModel.A2, fittedAvgModel.A3, indicesToReplace);
-
-                        % Remove it from the original data.
-                        replacementData         = neighbourData(tmpStartIdx:tmpEndIdx) - onlyLorentz;
-
-                        bestGuess       = threeLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c, neighbourFreqIndices');
-
-                    case 'leaveSlopeMinusLorentzian'
-                        % Fit a Lorentzian with slope
-                        fittedModel     = fit(neighbourFreqIndices', neighbourData', threeLorentzianWithSlopeC,...
-                                    'StartPoint', [fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c]);
-
-                        % Get the width of fitted lorentzians.
-                        x0Min                   = min([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-                        x0Max                   = max([fittedAvgModel.x01,fittedAvgModel.x02,fittedAvgModel.x03]);
-                        gMax                    = max(abs([fittedAvgModel.g1,fittedAvgModel.g2,fittedAvgModel.g3]));
-                        tmpStartIdx             = nearest(neighbourFreqIndices,x0Min - (cfg.strength * gMax));
-                        tmpEndIdx               = nearest(neighbourFreqIndices,x0Max + (cfg.strength * gMax));                        
-                        
-                        indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                        
-                        if length(indicesToReplace) > length(neighbourData)
-                            ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-                        end
-                        
-                        % Get just the slope
-                        replacementData         = justSlope(fittedModel.b,fittedModel.c, indicesToReplace);
-                        
-                        bestGuess       = threeLorentzianWithSlopeC(fittedAvgModel.A1, fittedAvgModel.A2, fittedAvgModel.A3, fittedAvgModel.b, fittedAvgModel.c, neighbourFreqIndices');
-                end
-            end
-%             % debug plots
-%             subplot(3,1,1);
-%             hold on
-%             plot(neighbourFreqIndices, neighbourData)
-%             plot(fittedModel)
-%             hold off
-%             subplot(3,1,2);
-%             hold on
-%             plot(indicesToReplace,replacementData)
-%             plot(fittedModel)
-%             hold off
-%             subplot(3,1,3);
-%             hold on
-%             plot(fittedModel)
-%             plot(bestGuess)
-%             hold off
-
-            % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
             if strcmp(cfg.log,'yes')
-                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
-            elseif strcmp(cfg.log,'no')
-                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
+                replacementData = exp(replacementData);
             end
+            
+            % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
+            fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
         end
 end
+
+
+
 
 %% Plot the result
 % % Original Data
