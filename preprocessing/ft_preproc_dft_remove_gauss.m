@@ -62,16 +62,11 @@ timeSeries          = data.trial{1};
 nsamples            = length(timeSeries);
 samplingFreq        = data.fsample;
 fftFreq             = samplingFreq * linspace(0, 1, nsamples);
+fftFreq             = fftFreq(1:nsamples/2+1);
 
 % Run the fft
 fftData             = fft(timeSeries,nsamples,2);
 
-% Get real pow
-% fftPow              = abs(fftData);
-% fftPow              = fftPow(:,1:nsamples/2+1);
-fftFreq             = fftFreq(1:nsamples/2+1);
-% avgFftPow           = median(fftPow,1);
-welchPow            = [];
 % To get a better estimation, use the Welch method
 welchPow            = zeros(length(data.label),length(fftFreq));
 for chanIdx = 1:length(data.label)
@@ -87,17 +82,7 @@ end
 % Put Welch in the same scale as the fft
 window          = hanning(nsamples);
 scaledWelchPow  = sqrt(welchPow*samplingFreq*(window'*window));
-% scaledWelchPow  = scaledWelchPow/2;
-% scaledWelchPow  = scaledWelchPow*(window'*window);
-% scaledWelchPow  = sqrt(scaledWelchPow);  
 avgWelchPow     = median(scaledWelchPow,1);
-
-% % Interp welch to fft freq resolution
-% interpWelchPow  = interp1(welchFreq,avgWelchPow,fftFreq);
-
-% Debug plot
-% plot(fftFreq,avgFftPow,fftFreq,avgWelchPow,'r');
-% set(gca, 'YScale', 'log')
 
 % Tidy up
 clear timeSeries samplingFreq nsamples 
@@ -220,6 +205,7 @@ switch cfg.peakShape
                             (A*exp(-2*((x-x0)/g).^2)) + (b*x) + c;
         justPeak        = @(A, x0, g, x)...
                             (A*exp(-2*((x-x0)/g).^2));
+       
     case 'Lorentzian'
         peakWithSlope   = @(A, x0, g, b, c, x)...
                             ((A .* (g.^2))./((g.^2) + ((x - x0).^2))) + (b.*x) + c;
@@ -244,9 +230,6 @@ switch cfg.independentPeaks
             neighbourUpperBound         = peakFreq(peakIdx) + (cfg.Neighwidth);
             neighbourFreqIndicesBound   = nearest(fftFreq,[neighbourLowerBound,neighbourUpperBound]);
             neighbourFreqIndices        = neighbourFreqIndicesBound(1):neighbourFreqIndicesBound(end);
-            
-%             % And the frequencies
-%             neighbourFreq               = fftFreq(neighbourFreqIndices);
             
             if strcmp(cfg.log,'yes')
                 % Get the chan avg data for those bounds.
@@ -306,7 +289,7 @@ switch cfg.independentPeaks
             maxG            = medianG + 3*iqrG;
             minG            = abs(medianG - 3*iqrG);
             % Fit again with a contraint on g
-                        for chanIdx = 1:length(fftData(:,1))
+            for chanIdx = 1:length(fftData(:,1))
                 % Guesses for fit (channel level)
                 neighbourChanData   = neighbourData(chanIdx,:);
                 % Slope
@@ -541,57 +524,6 @@ switch cfg.independentPeaks
             fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
         end
 end
-
-
-
-
-%% Plot the result
-% % Original Data
-% neighbourFreq       = fftFreq(neighbourFreqIndices);
-% 
-% neighbourFftPow     = welchPow(:,neighbourFreqIndices);
-% errorOrigFftPow     = std(neighbourFftPow,[],1)./sqrt(size(neighbourFftPow,1));
-% CI95OrigFftPow      = bsxfun(@plus, avgWelchPow(neighbourFreqIndices)', bsxfun(@times, [-1  1]*1.96, errorOrigFftPow'))';   % 95% Confidence Intervals
-% 
-% % Replaced Data
-% newFftPow           = abs(fftData(:,indicesToReplace));
-% avgNewFftPot        = median(newFftPow,1);
-% replacedFreq        = fftFreq(indicesToReplace);
-% errorNewFftPow     = std(newFftPow,[],1)./sqrt(size(newFftPow,1));
-% CI95NewFftPow      = bsxfun(@plus, avgNewFftPot', bsxfun(@times, [-1  1]*1.96, errorNewFftPow'))';   % 95% Confidence Intervals
-% 
-% % Difference between them
-% replacedOrigFftPow   = fftPow(:,indicesToReplace);
-% differencesFftPow   = newFftPow - replacedOrigFftPow ;
-% avgDifferencesFftPow    = median(differencesFftPow,1);
-% errorDifferencesFftPow     = std(differencesFftPow,[],1)./sqrt(size(differencesFftPow,1));
-% CI95DifferencesFftPow      = bsxfun(@plus, avgDifferencesFftPow', bsxfun(@times, [-1  1]*1.96, errorDifferencesFftPow'))';   % 95% Confidence Intervals
-% 
-% 
-% % Plot result.
-% figure
-% hold on
-% 
-% % Original Data
-% fill([neighbourFreq';flipud(neighbourFreq')]',[CI95OrigFftPow(1,:)';CI95OrigFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
-% line(neighbourFreq,avgFftPow(neighbourFreqIndices))
-% 
-% % New Data
-% fill([replacedFreq';flipud(replacedFreq')]',[CI95NewFftPow(1,:)';CI95NewFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
-% line(replacedFreq,avgNewFftPot)
-% 
-% % Difference data
-% fill([replacedFreq';flipud(replacedFreq')]',[CI95DifferencesFftPow(1,:)';CI95DifferencesFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
-% line(replacedFreq,avgDifferencesFftPow)
-% 
-% set(gca, 'YScale', 'log')
-% 
-
-% % Subtracted Data
-% fill([replacedFreq';flipud(replacedFreq')]',[CI95SubtractedData(1,:)';CI95SubtractedData(2,:)']',[.9 .9 .9],'linestyle','none');
-% line(replacedFreq,avgSubtractedData)
-% 
-% 
 
 % complex fourier coefficients are transformed back into time domin, fourier coefficients are treated as conjugate 'symmetric'
 % to ensure a real valued signal after iFFT
