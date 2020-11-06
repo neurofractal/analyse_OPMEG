@@ -1,4 +1,4 @@
-function [filt, filtFreq] = ft_preproc_dft_remove_gauss(cfg, data)
+function [filt, filtFreq] = ft_dft_modelling_filter(cfg, data)
 % Function to find peaks in spectrum, model their shape and remove them 
 % before transforming back into time domain. 
 % 
