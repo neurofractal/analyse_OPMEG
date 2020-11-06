@@ -2,18 +2,21 @@ function [filt, filteredFrequencies] = ft_preproc_dft_remove_gauss(cfg, data)
 % Function to find peaks in spectrum, model their shape and remove them 
 % before transforming back into time domain. 
 % 
-% Function is based on Search Results ft_preproc_dftfilter. In particular,
-% the spectrum interpolation method (Leske & Dalal, 2019, NeuroImage 189,
-% doi: 10.1016/j.neuroimage.2019.01.026).
+% This function takes inspiration from the spectrum interpolation method 
+% (Leske & Dalal, 2019, NeuroImage 189, 10.1016/j.neuroimage.2019.01.026).
 % 
 % Overview of function
-% 1)   Data transformed into the frequency domain via a discrete Fourier 
-%       transform (DFT). 
+% 1)   Data transformed into the frequency domain via using Welch method.
 % 2)   Peaks in the specified frequency range are identified and some
-%       characteristics extracted about them.
-% 3)   The characteristics are used to model them onto data from each
-%       channel.
-% 4)   A specified method is used to remove the peaks.
+%       properties extracted about them.
+% 3)   Either independently or as a pair, estimates are made about the
+%       distribution of peaks. 
+% 4)   For each channel, a better fit is made with some channel-wide
+%       constraints (centre and max width (g) of peak)
+% 5)   Depending on user input, these peak fits are either (1) subtracted 
+%       from the original fft power output or (2) used to determine the
+%       edges of each peak and to replace data within those edges with a
+%       fitted slope. 
 % 4)   The signal is transformed back into the time domain via inverse DFT
 %       (iDFT). 
 %
@@ -27,14 +30,23 @@ function [filt, filteredFrequencies] = ft_preproc_dft_remove_gauss(cfg, data)
 %                               between e.g. [40 60];
 %   cfg.Neighwidth          = width (in Hz) of peaks to evaluate, e.g. 2;
 %   cfg.minPeakDistance     = minimum distance in Hz between peaks.
-%   cfg.method              = 'leaveSlope' or 'removePeak' 
-% 	cfg.peakShape           = 'Guassian' or 'Lorentzian'
+%   cfg.method              = 'leaveSlope' or 'removePeak'. Whether to
+%                               subtract the modelled noise, potentially 
+%                               leaving signal behind, or reduce power 
+%                               uniformly. 
+% 	cfg.peakShape           = 'Guassian' or 'Lorentzian'. Determines the
+%                               distribution used to model the peak. 
+%                               Lorentzian usually works best.
 %   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks 
-%                               independently or together.
+%                               independently or together. Note, at the
+%                               moment only two peaks may be modelled
+%                               together. 
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
-%                               fitting.
+%                               fitting. May help with visualisation. 
 %   cfg.strength            = multiplier of g, the variable that determines 
-%                             distribution width.
+%                             distribution width. Higher strength will
+%                             remove more of the peak, but increase the
+%                             width of data lost.
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
