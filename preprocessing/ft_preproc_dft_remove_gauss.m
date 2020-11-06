@@ -4,6 +4,8 @@ function [filt, filtFreq] = ft_preproc_dft_remove_gauss(cfg, data)
 % 
 % This function takes inspiration from the spectrum interpolation method 
 % (Leske & Dalal, 2019, NeuroImage 189, 10.1016/j.neuroimage.2019.01.026).
+% The aim of this function is similar, but intends to automatically detect
+% peaks and their distributions so as to minimise the data removed. 
 % 
 % Overview of function
 % 1)   Data transformed into the frequency domain via using Welch method.
@@ -47,6 +49,13 @@ function [filt, filtFreq] = ft_preproc_dft_remove_gauss(cfg, data)
 %                             distribution width. Higher strength will
 %                             remove more of the peak, but increase the
 %                             width of data lost.
+% 
+% Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
+% 
+% Authors: Nicholas Alexander      (n.alexander@ucl.ac.uk) 
+%          Oliver Alexander
+%__________________________________________________________________________
+
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
