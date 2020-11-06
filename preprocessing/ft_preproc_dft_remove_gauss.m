@@ -1,4 +1,4 @@
-function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
+function [filt, filteredFrequencies] = ft_preproc_dft_remove_gauss(cfg, data)
 % Function to find peaks in spectrum, model their shape and remove them 
 % before transforming back into time domain. 
 % 
@@ -33,7 +33,8 @@ function [filt] = ft_preproc_dft_remove_gauss(cfg, data)
 %                               independently or together.
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
 %                               fitting.
-%   cfg.strength            = g multiplier width to remove. ELABORATE
+%   cfg.strength            = multiplier of g, the variable that determines 
+%                             distribution width.
 
 %% Extract info from input structure
 timeSeries          = data.trial{1};
@@ -45,10 +46,10 @@ fftFreq             = samplingFreq * linspace(0, 1, nsamples);
 fftData             = fft(timeSeries,nsamples,2);
 
 % Get real pow
-fftPow              = abs(fftData);
-fftPow              = fftPow(:,1:nsamples/2+1);
+% fftPow              = abs(fftData);
+% fftPow              = fftPow(:,1:nsamples/2+1);
 fftFreq             = fftFreq(1:nsamples/2+1);
-avgFftPow           = median(fftPow,1);
+% avgFftPow           = median(fftPow,1);
 welchPow            = [];
 % To get a better estimation, use the Welch method
 welchPow            = zeros(length(data.label),length(fftFreq));
@@ -64,11 +65,10 @@ end
 
 % Put Welch in the same scale as the fft
 window          = hanning(nsamples);
-scaledWelchPow  = welchPow;
-scaledWelchPow  = scaledWelchPow*samplingFreq;
+scaledWelchPow  = sqrt(welchPow*samplingFreq*(window'*window));
 % scaledWelchPow  = scaledWelchPow/2;
-scaledWelchPow  = scaledWelchPow*(window'*window);
-scaledWelchPow  = sqrt(scaledWelchPow);  
+% scaledWelchPow  = scaledWelchPow*(window'*window);
+% scaledWelchPow  = sqrt(scaledWelchPow);  
 avgWelchPow     = median(scaledWelchPow,1);
 
 % % Interp welch to fft freq resolution
@@ -209,6 +209,7 @@ end
 %% Remove Gaussian component from amplitude in spectrum
 switch cfg.independentPeaks
     case 'yes'
+        filteredFrequencies        = zeros(length(peakFreq),2);
         for peakIdx = 1:length(peakFreq)
             %% Find the neighbourhood data around the peak
             neighbourLowerBound         = peakFreq(peakIdx) - (cfg.Neighwidth);
@@ -222,11 +223,11 @@ switch cfg.independentPeaks
             if strcmp(cfg.log,'yes')
                 % Get the chan avg data for those bounds.
                 neighbourData               = log(scaledWelchPow(:,neighbourFreqIndices));
-                fftNeighbourData            = log(fftPow(:,neighbourFreqIndices));
+%                 fftNeighbourData            = log(fftPow(:,neighbourFreqIndices));
             elseif strcmp(cfg.log,'no')
                 % Get the chan avg data for those bounds.
                 neighbourData               = scaledWelchPow(:,neighbourFreqIndices);
-                fftNeighbourData            = fftPow(:,neighbourFreqIndices);
+%                 fftNeighbourData            = fftPow(:,neighbourFreqIndices);
             end
 
             %% First fit the peak with slope to each channel independently
@@ -248,11 +249,11 @@ switch cfg.independentPeaks
                 endVals         = mean(neighbourChanData((end - quarterLength):end));
                 startVals       = mean(neighbourChanData(1:1+quarterLength));
                 eighthLength    = round(quarterLength/2);
-                b      = (endVals - startVals) / (neighbourFreqIndices(end - eighthLength) - neighbourFreqIndices(eighthLength));
+                b               = (endVals - startVals) / (neighbourFreqIndices(end - eighthLength) - neighbourFreqIndices(eighthLength));
                 
                 % Constant - What is c equal to for the slope go through the middle?
                 middleValue     = mean([endVals,startVals]);
-                c      = middleValue - (b * x0);
+                c               = middleValue - (b * x0);
 
                 % Fit a peak with slope to the channel data.
                 fittedModel     = fit(neighbourFreqIndices', neighbourChanData', peakWithSlope,...
@@ -269,23 +270,27 @@ switch cfg.independentPeaks
                 end
             end
             
-            maxG        = max(abs(fittedStruct.g));
-            for chanIdx = 1:length(fftData(:,1))
-                % Get the width of cfg.strength gamma of fitted lorentzian.
-                tmpStartIdx             = nearest(neighbourFreqIndices,(x0 - (cfg.strength * maxG)));
-                tmpEndIdx               = nearest(neighbourFreqIndices,(x0 + (cfg.strength * maxG)));
+            % A central measure may work better here...
+            maxG        = median(abs(fittedStruct.g));
+            % Get the width of cfg.strength gamma of fitted lorentzian.
+            tmpStartIdx             = nearest(neighbourFreqIndices,(x0 - (cfg.strength * maxG)));
+            tmpEndIdx               = nearest(neighbourFreqIndices,(x0 + (cfg.strength * maxG)));
 
-                indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
-                if length(indicesToReplace) > length(neighbourData(chanIdx,:))
-                    ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
-                end
+            indicesToReplace        = neighbourFreqIndices(tmpStartIdx):neighbourFreqIndices(tmpEndIdx);
+            
+            filteredFrequencies(peakIdx,1:2)   = [fftFreq(indicesToReplace(1)),fftFreq(indicesToReplace(end))];
+            if length(indicesToReplace) > length(neighbourData(chanIdx,:))
+                ft_error('Frequencies being replaced are wider than the specified width. Increase neighbour width');
+            end
+            
+            for chanIdx = 1:length(fftData(:,1))
                 switch cfg.method
                     case 'removePeak'
                         % Get just the peak
-                        onlyLorentz             = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
+                        peakOnly                    = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
 
                         % Remove it from the original data.
-                        replacementData         = neighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - onlyLorentz;
+                        replacementData  = neighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - peakOnly;
 
                     case 'leaveSlope'
                         % Get the peak on a slope
@@ -294,34 +299,17 @@ switch cfg.independentPeaks
                         tmpEndVal               = fittedModelData(tmpEndIdx);
                         
                         % Linear interpolation across the peak.
-                        replacementData         = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
+                        replacementData  = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
+                        
                 end
                 
-%                 debug plots
-%                 subplot(3,1,1);
-%                 hold on
-%                 plot(neighbourFreqIndices, neighbourData)
-%                 plot(fittedModel)
-%                 hold off
-%                 subplot(3,1,2);
-%                 hold on
-%                 plot(indicesToReplace,replacementData)
-%                 plot(fittedModel)
-%                 hold off
-%                 subplot(3,1,3);
-%                 hold on
-%                 plot(fittedModel)
-%                 plot(bestGuess)
-%                 hold off
-                
-%                 replacementData = log2(replacementData);
+                if strcmp(cfg.log,'yes')
+                    replacementData = exp(replacementData);
+                end
                 
                 % Eulers formula: replace noise components with new mean amplitude combined with phase, that is retained from the original data
-                if strcmp(cfg.log,'yes')
-                    fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), exp(replacementData));
-                elseif strcmp(cfg.log,'no')
-                    fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
-                end
+                fftData(chanIdx,indicesToReplace) = bsxfun(@times, exp(bsxfun(@times,angle(fftData(chanIdx,indicesToReplace)),1i)), replacementData);
+
             end
         end
     case 'no'
@@ -343,15 +331,12 @@ switch cfg.independentPeaks
         
         if strcmp(cfg.log,'yes')
             % Get the chan avg data for those bounds.
-            peakWidthData               = log(abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end))));
-            neighbourData               = log(abs(avgData(neighbourFreqIndices)));
+            neighbourData               = log(scaledWelchPow(neighbourFreqIndices));
         elseif strcmp(cfg.log,'no')
             % Get the chan avg data for those bounds.
-            peakWidthData               = abs(avgData(widthFreqIndicesBound(1):widthFreqIndicesBound(end)));
-            neighbourData               = abs(avgData(neighbourFreqIndices));
+            neighbourData               = scaledWelchPow(neighbourFreqIndices);
         end
-       
-        
+               
         % Guesses for fit (channel level)
         A           = zeros(size(peakFreq));
         x0          = zeros(size(peakFreq));
@@ -585,6 +570,54 @@ switch cfg.independentPeaks
             end
         end
 end
+
+%% Plot the result
+% % Original Data
+% neighbourFreq       = fftFreq(neighbourFreqIndices);
+% 
+% neighbourFftPow     = welchPow(:,neighbourFreqIndices);
+% errorOrigFftPow     = std(neighbourFftPow,[],1)./sqrt(size(neighbourFftPow,1));
+% CI95OrigFftPow      = bsxfun(@plus, avgWelchPow(neighbourFreqIndices)', bsxfun(@times, [-1  1]*1.96, errorOrigFftPow'))';   % 95% Confidence Intervals
+% 
+% % Replaced Data
+% newFftPow           = abs(fftData(:,indicesToReplace));
+% avgNewFftPot        = median(newFftPow,1);
+% replacedFreq        = fftFreq(indicesToReplace);
+% errorNewFftPow     = std(newFftPow,[],1)./sqrt(size(newFftPow,1));
+% CI95NewFftPow      = bsxfun(@plus, avgNewFftPot', bsxfun(@times, [-1  1]*1.96, errorNewFftPow'))';   % 95% Confidence Intervals
+% 
+% % Difference between them
+% replacedOrigFftPow   = fftPow(:,indicesToReplace);
+% differencesFftPow   = newFftPow - replacedOrigFftPow ;
+% avgDifferencesFftPow    = median(differencesFftPow,1);
+% errorDifferencesFftPow     = std(differencesFftPow,[],1)./sqrt(size(differencesFftPow,1));
+% CI95DifferencesFftPow      = bsxfun(@plus, avgDifferencesFftPow', bsxfun(@times, [-1  1]*1.96, errorDifferencesFftPow'))';   % 95% Confidence Intervals
+% 
+% 
+% % Plot result.
+% figure
+% hold on
+% 
+% % Original Data
+% fill([neighbourFreq';flipud(neighbourFreq')]',[CI95OrigFftPow(1,:)';CI95OrigFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
+% line(neighbourFreq,avgFftPow(neighbourFreqIndices))
+% 
+% % New Data
+% fill([replacedFreq';flipud(replacedFreq')]',[CI95NewFftPow(1,:)';CI95NewFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
+% line(replacedFreq,avgNewFftPot)
+% 
+% % Difference data
+% fill([replacedFreq';flipud(replacedFreq')]',[CI95DifferencesFftPow(1,:)';CI95DifferencesFftPow(2,:)']',[.9 .9 .9],'linestyle','none');
+% line(replacedFreq,avgDifferencesFftPow)
+% 
+% set(gca, 'YScale', 'log')
+% 
+
+% % Subtracted Data
+% fill([replacedFreq';flipud(replacedFreq')]',[CI95SubtractedData(1,:)';CI95SubtractedData(2,:)']',[.9 .9 .9],'linestyle','none');
+% line(replacedFreq,avgSubtractedData)
+% 
+% 
 
 % complex fourier coefficients are transformed back into time domin, fourier coefficients are treated as conjugate 'symmetric'
 % to ensure a real valued signal after iFFT
