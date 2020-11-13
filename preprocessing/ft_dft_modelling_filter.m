@@ -36,7 +36,7 @@ function [filt, filtFreq] = ft_dft_modelling_filter(cfg, data)
 %                               subtract the modelled noise, potentially 
 %                               leaving signal behind, or reduce power 
 %                               uniformly. 
-% 	cfg.peakShape           = 'Guassian' or 'Lorentzian'. Determines the
+% 	cfg.peakShape           = 'Gaussian' or 'Lorentzian'. Determines the
 %                               distribution used to model the peak. 
 %                               Lorentzian usually works best.
 %   cfg.independentPeaks    = 'yes' or 'no'. Whether to model peaks 
@@ -200,7 +200,7 @@ clear firstRun changePeaks minPeakProminence diffPeaks noPeaks...
 justSlope       = @(b, c, x)...
                     (b.*x) + c;
 switch cfg.peakShape
-    case 'Guassian'
+    case 'Gaussian'
         peakWithSlope   = @(A, x0, g, b, c, x)...
                             (A*exp(-2*((x-x0)/g).^2)) + (b*x) + c;
         justPeak        = @(A, x0, g, x)...
