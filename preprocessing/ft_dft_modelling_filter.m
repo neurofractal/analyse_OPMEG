@@ -292,15 +292,10 @@ switch cfg.independentPeaks
             maxG            = g + 3*iqrG;
             minG            = abs(g - 3*iqrG);
             
-            % A may vary greatly between sensors so don't limit it
-            A               = median(fittedStruct.A);
-            
             b               = median(fittedStruct.b);
             iqrB            = iqr(fittedStruct.b);
             maxB            = b + 3*iqrB;
             minB            = b - 3*iqrB;
-            
-            
             
             
             %% Fit again with new limits
@@ -310,7 +305,7 @@ switch cfg.independentPeaks
                 
                 % Fit a peak with slope to the channel data.
                 fittedModel     = fit(neighbourFreqIndices', neighbourChanData', peakWithSlope,...
-                                    'StartPoint', [abs(fittedStruct.A), x0, g, b, fittedStruct.c],...
+                                    'StartPoint', [abs(fittedStruct.A(chanIdx)), x0, g, b, fittedStruct.c(chanIdx)],...
                                     'Lower',[0, x0, minG, minB, -inf],...
                                     'Upper',[inf, x0, maxG, maxB, inf]);
 
