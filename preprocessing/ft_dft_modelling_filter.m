@@ -66,7 +66,7 @@ fftFreq             = fftFreq(1:nsamples/2+1);
 
 % Run the fft
 fftData             = fft(timeSeries,nsamples,2);
-
+fftPow              = abs(fftData);
 % To get a better estimation, use the Welch method
 welchPow            = zeros(length(data.label),length(fftFreq));
 for chanIdx = 1:length(data.label)
@@ -234,11 +234,11 @@ switch cfg.independentPeaks
             if strcmp(cfg.log,'yes')
                 % Get the chan avg data for those bounds.
                 neighbourData               = log(scaledWelchPow(:,neighbourFreqIndices));
-%                 fftNeighbourData            = log(fftPow(:,neighbourFreqIndices));
+                fftNeighbourData            = log(fftPow(:,neighbourFreqIndices));
             elseif strcmp(cfg.log,'no')
                 % Get the chan avg data for those bounds.
                 neighbourData               = scaledWelchPow(:,neighbourFreqIndices);
-%                 fftNeighbourData            = fftPow(:,neighbourFreqIndices);
+                fftNeighbourData            = fftPow(:,neighbourFreqIndices);
             end
 
             %% First fit the peak with slope to each channel independently
@@ -286,33 +286,33 @@ switch cfg.independentPeaks
             % Set the x0 for remaining fits
             x0      = median(fittedStruct.x0);
             
-            
-            % It might be worth using the maxG as a limit for the fitted
-            % model. 
-            medianG        = median(abs(fittedStruct.g));
+            %% Set some limits for the next fitting
+            g               = median(abs(fittedStruct.g));
             iqrG            = iqr(abs(fittedStruct.g));
-            maxG            = medianG + 3*iqrG;
-            minG            = abs(medianG - 3*iqrG);
-            % Fit again with a contraint on g
+            maxG            = g + 3*iqrG;
+            minG            = abs(g - 3*iqrG);
+            
+            % A may vary greatly between sensors so don't limit it
+            A               = median(fittedStruct.A);
+            
+            b               = median(fittedStruct.b);
+            iqrB            = iqr(fittedStruct.b);
+            maxB            = b + 3*iqrB;
+            minB            = b - 3*iqrB;
+            
+            
+            
+            
+            %% Fit again with new limits
             for chanIdx = 1:length(fftData(:,1))
                 % Guesses for fit (channel level)
                 neighbourChanData   = neighbourData(chanIdx,:);
-                % Slope
-                quarterLength   = round(length(neighbourChanData)/4);
-                endVals         = mean(neighbourChanData((end - quarterLength):end));
-                startVals       = mean(neighbourChanData(1:1+quarterLength));
-                eighthLength    = round(quarterLength/2);
-                b               = (endVals - startVals) / (neighbourFreqIndices(end - eighthLength) - neighbourFreqIndices(eighthLength));
                 
-                % Constant - What is c equal to for the slope go through the middle?
-                middleValue     = mean([endVals,startVals]);
-                c               = middleValue - (b * x0);
-
                 % Fit a peak with slope to the channel data.
                 fittedModel     = fit(neighbourFreqIndices', neighbourChanData', peakWithSlope,...
-                                    'StartPoint', [A, x0, medianG, b, c],...
-                                    'Lower',[-inf, x0, minG, -inf, -inf],...
-                                    'Upper',[inf, x0, maxG, inf, inf]);
+                                    'StartPoint', [abs(fittedStruct.A), x0, g, b, fittedStruct.c],...
+                                    'Lower',[0, x0, minG, minB, -inf],...
+                                    'Upper',[inf, x0, maxG, maxB, inf]);
 
                 fitCoeffValue   = coeffvalues(fittedModel);
                 fitCoeffNames   = coeffnames(fittedModel);
@@ -349,10 +349,10 @@ switch cfg.independentPeaks
                         
                     case 'removePeak2'
                         % Get the peak on a slope
-                        fittedModelData         = peakWithSlope(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),fittedStruct.b(chanIdx),fittedStruct.c(chanIdx),indicesToReplace);
+                        peakOnly                = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
                         
                         % Remove it from the original data.
-                        replacementData         = neighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - fittedModelData;
+                        replacementData         = fftNeighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - peakOnly;
 
                     case 'leaveSlope'
                         % Get the peak on a slope
