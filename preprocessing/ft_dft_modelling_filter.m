@@ -49,7 +49,10 @@ function [filt, filtFreq] = ft_dft_modelling_filter(cfg, data)
 %                             distribution width. Higher strength will
 %                             remove more of the peak, but increase the
 %                             width of data lost.
-% 
+%   cfg.windowLength        = Number of seconds defining the length of the
+%                               window used in the Welch estimate. Adjust 
+%                               until the estimate appears smooth. e.g. 20.
+%                               Set to [] for pwelch default.
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 % 
 % Authors: Nicholas Alexander      (n.alexander@ucl.ac.uk) 
@@ -69,12 +72,13 @@ fftData             = fft(timeSeries,nsamples,2);
 fftPow              = abs(fftData);
 % To get a better estimation, use the Welch method
 welchPow            = zeros(length(data.label),length(fftFreq));
+windowLength        = samplingFreq*cfg.windowLength;
 for chanIdx = 1:length(data.label)
     if chanIdx == 1
-        [welchTmp, welchFreq]       = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        [welchTmp, welchFreq]       = pwelch(timeSeries(chanIdx,:),windowLength,0,[],samplingFreq);
         welchPow(chanIdx,:)         = interp1(welchFreq,welchTmp,fftFreq);
     else
-        welchTmp                    = pwelch(timeSeries(chanIdx,:),[],0,[],samplingFreq);
+        welchTmp                    = pwelch(timeSeries(chanIdx,:),windowLength,0,[],samplingFreq);
         welchPow(chanIdx,:)         = interp1(welchFreq,welchTmp,fftFreq);
     end
 end
@@ -85,7 +89,7 @@ scaledWelchPow  = sqrt(welchPow*samplingFreq*(window'*window));
 avgWelchPow     = median(scaledWelchPow,1);
 
 % Tidy up
-clear timeSeries samplingFreq nsamples 
+clear timeSeries samplingFreq nsamples welch* window*
 
 % Select pow data for the foi.
 foiIdx            	= ~(fftFreq < cfg.foi(1) | fftFreq > cfg.foi(2));
@@ -189,9 +193,10 @@ end
 
 
 % Tidy up
-clear firstRun changePeaks minPeakProminence diffPeaks noPeaks...
-    initialPeakPromList freqFOI foiIdx smoothPowFOI...
-    allPeakProm peakSortIdx peakCount avgFftPowFOI freqFOI
+clear firstRun changePeaks minPeakProminence diffPeaks noPeaks chanIdx...
+    initialPeakPromList freqFOI foiIdx smoothPowFOI current*...
+    allPeakProm peakSortIdx peakCount avgFftPowFOI freqFOI widthLines...
+    avgWelchPow
 
 
 %% Define functions for fitting
@@ -271,7 +276,7 @@ switch cfg.independentPeaks
                 % Fit a peak with slope to the channel data.
                 fittedModel     = fit(neighbourFreqIndices', neighbourChanData', peakWithSlope,...
                                     'StartPoint', [A, x0, g, b, c],...
-                                    'Lower',[-inf, x0-g, -inf, -inf, -inf],...
+                                    'Lower',[0, x0-g, 0, -inf, -inf],...
                                     'Upper',[inf, x0+g, inf, inf, inf]);
 
                 fitCoeffValue   = coeffvalues(fittedModel);
@@ -287,26 +292,29 @@ switch cfg.independentPeaks
             x0      = median(fittedStruct.x0);
             
             %% Set some limits for the next fitting
+            % Gamma should not be wider than the Welch estimate, but may be
+            % narrower.
             g               = median(abs(fittedStruct.g));
             iqrG            = iqr(abs(fittedStruct.g));
             maxG            = g + 3*iqrG;
-            minG            = abs(g - 3*iqrG);
             
+            % b should be about right from the Welch estimate so constrain.
             b               = median(fittedStruct.b);
             iqrB            = iqr(fittedStruct.b);
             maxB            = b + 3*iqrB;
             minB            = b - 3*iqrB;
             
+            % A may vary greatly from channel to channel
             
-            %% Fit again with new limits
+            %% Fit again with new limits and the original fft data
             for chanIdx = 1:length(fftData(:,1))
                 % Guesses for fit (channel level)
-                neighbourChanData   = neighbourData(chanIdx,:);
+                fftNeighbourChanData   = fftNeighbourData(chanIdx,:);
                 
                 % Fit a peak with slope to the channel data.
-                fittedModel     = fit(neighbourFreqIndices', neighbourChanData', peakWithSlope,...
-                                    'StartPoint', [abs(fittedStruct.A(chanIdx)), x0, g, b, fittedStruct.c(chanIdx)],...
-                                    'Lower',[0, x0, minG, minB, -inf],...
+                fittedModel     = fit(neighbourFreqIndices', fftNeighbourChanData', peakWithSlope,...
+                                    'StartPoint', [fittedStruct.A(chanIdx), x0, g, b, fittedStruct.c(chanIdx)],...
+                                    'Lower',[0, x0, 0, minB, -inf],...
                                     'Upper',[inf, x0, maxG, maxB, inf]);
 
                 fitCoeffValue   = coeffvalues(fittedModel);
@@ -336,13 +344,6 @@ switch cfg.independentPeaks
             for chanIdx = 1:length(fftData(:,1))
                 switch cfg.method
                     case 'removePeak'
-                        % Get just the peak
-                        peakOnly                = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
-
-                        % Remove it from the original data.
-                        replacementData         = neighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - peakOnly;
-                        
-                    case 'removePeak2'
                         % Get the peak on a slope
                         peakOnly                = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
                         
@@ -357,10 +358,6 @@ switch cfg.independentPeaks
                         
                         % Linear interpolation across the peak.
                         replacementData         = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
-                        
-                    case 'leaveSlope2'
-                        replacementData               = justSlope(fittedStruct.b(chanIdx),fittedStruct.c(chanIdx),indicesToReplace);
-                        
                 end
                 
                 if strcmp(cfg.log,'yes')
