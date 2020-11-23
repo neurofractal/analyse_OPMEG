@@ -1,6 +1,6 @@
-function [shield,freq] = ft_opm_psd_compare(cfg,rawData1,rawData2)
+function [gain,freq] = ft_opm_psd_compare(cfg,rawData1,rawData2)
 % Function to compute relative PSD of two OPM datasets 
-% (for checking shielding factors). Designed for (OPMEG) data acquired 
+% (for checking gain/shielding factor). Designed for (OPMEG) data acquired 
 % from the UCL Wellcome Centre for Neuroimaging.
 %
 % EXAMPLE USEAGE:   [shield,freq] = ft_opm_psd_compare(cfg,rawData1,rawData2)
@@ -93,9 +93,9 @@ if strcmp(cfg.method,'tim')
 end
 
 if strcmp(cfg.dB,'yes')
-    shield = 20*log10(pow1./pow2);
+    gain = 10*log10(pow1./pow2);
 else
-    shield = pow1-pow2;
+    gain = pow1-pow2;
 end
 
 % Plot
@@ -110,7 +110,7 @@ if strcmp(cfg.plot,'yes')
     set(gcf,'Position',[100 100 1200 800]);
     % Plot all channels
     if strcmp(cfg.dB,'yes')
-        h = plot(freq,shield,'LineWidth',1); hold on;
+        h = plot(freq,gain,'LineWidth',1); hold on;
         % Try fancy colormap
         try
             set(h, {'color'},num2cell(colormap123,2));
@@ -118,14 +118,14 @@ if strcmp(cfg.plot,'yes')
         end
         % Plot the mean in black
         if strcmp(cfg.method,'matlab')
-            plot(freq,squeeze(mean(shield,1)),'-k','LineWidth',2);
+            plot(freq,squeeze(mean(gain,1)),'-k','LineWidth',2);
         else
-            plot(freq,squeeze(mean(shield,2)),'-k','LineWidth',2);
+            plot(freq,squeeze(mean(gain,2)),'-k','LineWidth',2);
         end
     else
-        semilogy(freq,shield,'LineWidth',1); hold on;
+        semilogy(freq,gain,'LineWidth',1); hold on;
         % Plot the mean in black
-        semilogy(freq,squeeze(mean(shield,2)),'-k','LineWidth',2);
+        semilogy(freq,squeeze(mean(gain,2)),'-k','LineWidth',2);
     end
     hold on;
     grid on;

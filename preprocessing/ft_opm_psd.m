@@ -129,12 +129,18 @@ switch method_for_fft
             ax.TickLength = [0.02 0.02];
             ylabel('PSD (T^2/Hz)','FontSize',30);
             xlabel('Frequency (Hz)','FontSize',30);
-            % Legend
-            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),'location','eastoutside');
-            hl = findobj(hobj,'type','line');
-            set(hl,'LineWidth',4);
-            ht = findobj(hobj,'type','text');
-            set(ht,'FontSize',12);
+            
+            
+            % Plot legend
+            if strcmp(cfg.plot_legend,'yes')
+                % Legend
+                [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),'location','eastoutside');
+                hl = findobj(hobj,'type','line');
+                set(hl,'LineWidth',4);
+                ht = findobj(hobj,'type','text');
+                set(ht,'FontSize',12);
+            end
+            
         end
         
         % 2. RS Homebrewed Script Using ft_freqanalysis. Not quite right...

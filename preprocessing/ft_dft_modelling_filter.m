@@ -32,10 +32,11 @@ function [filt, filtFreq] = ft_dft_modelling_filter(cfg, data)
 %                               between e.g. [40 60];
 %   cfg.Neighwidth          = width (in Hz) of peaks to evaluate, e.g. 2;
 %   cfg.minPeakDistance     = minimum distance in Hz between peaks.
-%   cfg.method              = 'leaveSlope' or 'removePeak'. Whether to
-%                               subtract the modelled noise, potentially 
-%                               leaving signal behind, or reduce power 
-%                               uniformly. 
+%   cfg.method              = 'leaveSlope' will replace data modelled on
+%                               the slope beneath the peak. 'subtractPeak'
+%                               will subtract the model of the peak from
+%                               the PSD. 'chopPeak' will interpolate across
+%                               the edges of the peak.
 % 	cfg.peakShape           = 'Gaussian' or 'Lorentzian'. Determines the
 %                               distribution used to model the peak. 
 %                               Lorentzian usually works best.
@@ -44,7 +45,10 @@ function [filt, filtFreq] = ft_dft_modelling_filter(cfg, data)
 %                               moment only two peaks may be modelled
 %                               together. 
 %   cfg.log                 = 'yes' or 'no'. Whether to log the PSD before
-%                               fitting. May help with visualisation. 
+%                               fitting. May help with visualisation. Works
+%                               best with 'leaveSlope' when 'yes' and best
+%                               with 'removePeak' when 'no', for the most
+%                               part.
 %   cfg.strength            = multiplier of g, the variable that determines 
 %                             distribution width. Higher strength will
 %                             remove more of the peak, but increase the
@@ -343,14 +347,14 @@ switch cfg.independentPeaks
             
             for chanIdx = 1:length(fftData(:,1))
                 switch cfg.method
-                    case 'removePeak'
+                    case 'subtractPeak'
                         % Get the peak on a slope
                         peakOnly                = justPeak(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),indicesToReplace);
                         
                         % Remove it from the original data.
                         replacementData         = fftNeighbourData(chanIdx,tmpStartIdx:tmpEndIdx) - peakOnly;
 
-                    case 'leaveSlope'
+                    case 'chopPeak'
                         % Get the peak on a slope
                         fittedModelData         = peakWithSlope(fittedStruct.A(chanIdx),fittedStruct.x0(chanIdx),fittedStruct.g(chanIdx),fittedStruct.b(chanIdx),fittedStruct.c(chanIdx),neighbourFreqIndices);
                         tmpStartVal             = fittedModelData(tmpStartIdx);
@@ -358,6 +362,10 @@ switch cfg.independentPeaks
                         
                         % Linear interpolation across the peak.
                         replacementData         = interp1([neighbourFreqIndices(tmpStartIdx),neighbourFreqIndices(tmpEndIdx)],[tmpStartVal,tmpEndVal],indicesToReplace,'linear');
+                    case 'leaveSlope'
+                        slopeOnly         = justSlope(fittedStruct.b(chanIdx),fittedStruct.c(chanIdx),neighbourFreqIndices);
+                        replacementData     = slopeOnly(tmpStartIdx:tmpEndIdx);
+                
                 end
                 
                 if strcmp(cfg.log,'yes')
