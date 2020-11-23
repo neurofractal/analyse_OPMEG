@@ -86,7 +86,7 @@ if size(pow1,1) ~= size(pow2,1)
     error('Possible mismatch between sampling rate (Hz)');
 end
 
-% Calculate Shielding Factor
+% Calculate gain
 if strcmp(cfg.method,'tim')
     pow1 = median(pow1(:,:,:),3);
     pow2 = median(pow2(:,:,:),3);
@@ -134,9 +134,9 @@ if strcmp(cfg.plot,'yes')
     ax.TickLength = [0.02 0.02];
     fig= gcf;
     fig.Color=[1,1,1];
-    xlabel('Frequency (Hz)','FontSize',30)
+    xlabel('Frequency (Hz)','interpreter','latex','FontSize',30)
     if strcmp(cfg.dB,'yes')
-        labY = ['Shielding Factor (dB)'];
+        labY = 'Gain (dB)';
     else
         labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
     end
@@ -146,7 +146,7 @@ if strcmp(cfg.plot,'yes')
     xlim([cfg.foi(1), cfg.foi(end)]);
     %ylim([1, 1000]);
     % Legend
-    if strcmp(cfg.plot_legend,'yes');
+    if strcmp(cfg.plot_legend,'yes')
         [~, hobj, ~, ~] = legend(vertcat(label1, 'mean'),'location','eastoutside');
         hl = findobj(hobj,'type','line');
         set(hl,'LineWidth',4);
