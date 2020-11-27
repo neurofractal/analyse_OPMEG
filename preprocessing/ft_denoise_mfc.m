@@ -11,7 +11,7 @@ function [data, M, chan_inds] = ft_denoise_mfc(data)
 % George O'Neill (g.o'neill [at] ucl.ac.uk)
 
 % generate projector
-N = data.grad.chanori;
+N = data.grad.coilori;
 M = eye(length(N)) - N*pinv(N);
 
 % Update the tra to account for this (its probably identity already,
