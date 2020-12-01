@@ -353,7 +353,7 @@ switch senstype
      
       % all MEG channels start with MAG
       labelmeg  = datachannel(strncmp('meg', datachantype, 3));
-      labelmegref = datachannel(strncmp('ref', datachantype, 3));
+      labelmegref = datachannel(strncmp('refmag', datachantype, 3));
       if ~isempty(dataoritype)
         labelmegrad = datachannel(strncmp('RAD', dataoritype, 3));
         labelmegtan = datachannel(strncmp('TAN', dataoritype, 3));
