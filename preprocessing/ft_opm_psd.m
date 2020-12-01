@@ -48,6 +48,10 @@ if ~isfield(cfg, 'plot_legend')
     cfg.plot_legend = 'yes';
 end
 
+if ~isfield(cfg, 'average')
+    cfg.average = 'median';
+end
+
 %% Select the data based on cfg.channel option
 if strcmp(cfg.channel,'all')
     disp('Calculating PSD for ALL channels');
@@ -237,9 +241,11 @@ switch method_for_fft
             freq = 0:fs/size(fzf,1):fs/2;
             odd=mod(size(fzf,1),2)==1;
             if(odd)
-                psdx(2:end) = sqrt(2)*psdx(2:end);
+                %psdx(2:end) = sqrt(2)*psdx(2:end);
+                psdx(2:end) = psdx(2:end);
             else
-                psdx(2:end-1) = sqrt(2)*psdx(2:end-1);
+                %psdx(2:end-1) = sqrt(2)*psdx(2:end-1);
+                psdx(2:end-1) = psdx(2:end-1);
             end
             pow(:,:,j) =psdx;
         end
@@ -254,8 +260,13 @@ switch method_for_fft
                 disp('Using default colorscheme')
             end
             
-            % Calculate median out of all epochs
-            po = median(pow(:,:,:),3);
+            % Calculate median or mean out of all epochs
+            if strcmp(cfg.average,'median')
+                po = median(pow(:,:,:),3);
+            else
+                po = mean(pow(:,:,:),3);
+            end
+            
             figure()
             set(gcf,'Position',[100 100 1200 800]);
             fig= gcf;
