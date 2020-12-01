@@ -14,6 +14,8 @@ function [pow, freq, label] = ft_opm_psd(cfg,rawData)
 %   cfg.channel         = 'all', 'MEG', 'RAD', 'TAN' (default = 'all').
 %   cfg.plot            = 'yes' or 'no' (default = 'yes')
 %   cfg.plot_legend     = 'yes' or 'no' (default = 'yes')
+%   cfg.average         = how to average over blocks: 'median' or 
+%                         'mean' (default = 'median')
 %__________________________________________________________________________
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 % Adapted from spm_opm_create (Tim Tierney)
