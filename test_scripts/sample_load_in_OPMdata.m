@@ -59,20 +59,6 @@ cfg.plot            = 'yes';
 [pow freq]          = ft_opm_psd(cfg,rawData_MEG);
 ylim([1 1e4])
 
-%% Mean Field Correction
-% Please ask George O'N for ft_denoise_mfc.m
-[rawData_MEG_mfc, M, chan_inds] = ft_denoise_mfc(rawData_MEG);
-
-% Plot PSD
-cfg                 = [];
-cfg.channel         = 'all';
-cfg.trial_length    = 10;
-cfg.method          = 'tim';
-cfg.foi             = [1 150];
-cfg.plot            = 'yes';
-cfg.plot_legend      = 'no';
-[pow freq]          = ft_opm_psd(cfg,rawData_MEG_mfc);
-ylim([1 1e4])
 
 %% DSSP
 % Load the sourcemodel (3D mesh) and headmodel

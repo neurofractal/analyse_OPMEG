@@ -10,7 +10,7 @@ Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
           Tim West
           
 ### Example Analysis Scripts and Tutorials:
--  [Load in OPM data and denoise using Mean Field Correction and/or DSSP](./test_scripts/sample_load_in_OPMdata.m)
+-  [Load in OPM data and denoise using DSSP](./test_scripts/sample_load_in_OPMdata.m)
 - [More Complex Data Denoising](https://github.com/FIL-OPMEG/NR4M) *work in progress*
 - [OPM Benchmarking Analysis Scripts](https://github.com/FIL-OPMEG/opm_benchmarking_2020) *work in progress*
 
