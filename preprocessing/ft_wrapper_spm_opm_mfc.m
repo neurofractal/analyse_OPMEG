@@ -83,10 +83,15 @@ end
 
 % Remove SPM + add Fieldtrip
 close all force
-rmpath(genpath(path_to_SPM));
-rmpath(path_to_OPM_repo);
+rmpath(genpath(cfg.path_to_SPM));
+rmpath(cfg.path_to_OPM_repo);
 addpath(ft_path);
 ft_defaults
+
+% Delete SPM data
+delete data.dat
+delete data.mat
+
 
 end
 
