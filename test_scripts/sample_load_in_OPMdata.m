@@ -1,14 +1,14 @@
 %% Paths (RS)
-fieldtripDir    = 'D:\scripts\fieldtrip-master';
-script_dir      = 'D:\Github\analyse_OPMEG';
-data_dir        = 'D:\data\20201112_motor';
-save_dir        = 'C:\Users\rseymour\Dropbox\Research\Projects\2020\opm_benchmarking\motor';
-denoise_dir     = 'D:\scripts\NoiseTools';
-NR4M_dir        = 'D:\Github\NR4M';
-scannercast_dir = 'D:\Github\scannercast\examples\NA\';
+fieldtripDir    = '/Users/rseymoue/Documents/scripts/fieldtrip-20191213';
+script_dir      = '/Users/rseymoue/Documents/GitHub/analyse_OPMEG';
+data_dir        = '/Volumes/Robert T5/20201209';
+save_dir        = '/Users/rseymoue/Dropbox/Research/Projects/2020/opm_benchmarking/optitrack';
+denoise_dir     = '/Users/rseymoue/Documents/scripts/NoiseTools';
+NR4M_dir        = '/Users/rseymoue/Documents/GitHub/NR4M';
+scannercast_dir = '/Users/rseymoue/Documents/GitHub/scannercast/examples/NA';
 
 % Add Fieldtrip to path
-disp('Adding Fieldtrip, NoiseTools, NR4M and analyse_OPMEG to your MATLAB path');
+disp('Adding Fieldtrip and analyse_OPMEG to your MATLAB path');
 addpath(fieldtripDir)
 ft_defaults;
 
@@ -17,18 +17,18 @@ addpath(genpath(script_dir));
 
 % Add NoiseTools to path
 addpath(denoise_dir)
-% Add NR4M to path
 addpath(genpath(NR4M_dir));
 % cd to save dir
 cd(save_dir)
 
 %% (2) Start preprocessing.
 % Read in the raw data using BIDS
+disp('Loading Data...');
 cfg             = [];
 cfg.folder      = data_dir;
 cfg.precision   = 'single';
-cfg.bids.task   = 'motor_right';
-cfg.bids.sub    = 'NA';
+cfg.bids.task   = 'noise';
+cfg.bids.sub    = 'noise';
 cfg.bids.ses    = '001';
 cfg.bids.run    = '001';
 rawData         = ft_opm_create(cfg);
@@ -49,6 +49,13 @@ cfg             = [];
 cfg.channel     = vertcat(ft_channelselection_opm('MEG',rawData));
 rawData_MEG     = ft_selectdata(cfg,rawData);
 
+%% Work in progress code for mean field correction
+cfg                     = [];
+cfg.path_to_SPM         = '/Users/rseymoue/Documents/scripts/spm12';
+cfg.path_to_OPM_repo    = '/Users/rseymoue/Documents/GitHub/OPM';
+cfg.correctgrad         = 'yes';
+[rawData_MEG_mfc]       = ft_wrapper_spm_opm_mfc(cfg,rawData_MEG);
+
 %% PSD
 cfg                 = [];
 cfg.channel         = 'all';
@@ -56,9 +63,8 @@ cfg.trial_length    = 10;
 cfg.method          = 'tim';
 cfg.foi             = [1 150];
 cfg.plot            = 'yes';
-[pow freq]          = ft_opm_psd(cfg,rawData_MEG);
+[pow freq]          = ft_opm_psd(cfg,rawData_MEG_mfc);
 ylim([1 1e4])
-
 
 %% DSSP
 % Load the sourcemodel (3D mesh) and headmodel
