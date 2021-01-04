@@ -28,14 +28,20 @@ end
     
 %% Get Fieldtrip path and remove from your path
 [~, ft_path] = ft_version;
+% Little hack to turn off warnings
+id = 'MATLAB:rmpath:DirNotFound';
+warning('off',id);
+% Remove Fieldtrip path and external/spm12 and external/spm8
 rmpath(ft_path);
 rmpath(fullfile(ft_path,'external','spm12'));
 rmpath(fullfile(ft_path,'external','spm8'));
+
 
 %% Add SPM
 addpath(cfg.path_to_SPM);
 spm('defaults', 'eeg')
 
+%% Some jiggery pokery to make it work
 % Change chantype of megmag
 for i = 1:length(data.grad.chantype)
     data.grad.chantype{i,1} = 'megmag';
@@ -46,15 +52,23 @@ for ii = 1:length(data.grad.label)
     data.grad.chanunit{ii} = 'T';
 end
 
-% FT to SPM
+%% Convert data from FT to SPM
 data_SPM = spm_eeg_ft2spm(data,'data');
 
-% Add OPM
-addpath(cfg.path_to_OPM_repo);
+% Turn warnings back on
+warning('on',id);
+
+%% Add Tim's OPM repo
+try
+    addpath(cfg.path_to_OPM_repo);
+catch
+    warning('Did you specify the OPM repo correctly?');
+end
 
 %% Perform MFC
+disp('Performing MFC...');
 S           = [];
-S.D         = data_SPM
+S.D         = data_SPM;
 if strcmp(cfg.correctgrad,'yes')
     S.balance   = 1;
 else
@@ -65,12 +79,15 @@ end
 %% Convert from SPM to Fieldtrip
 data_out = data_SPM_mfc.ftraw;
 
-% Change chanunit back to 'fT' ??? Not sure why this works?
+%% Undoing the jiggery pokery
+% Change chanunit back to 'fT' 
 for ii = 1:length(data.grad.label)
     data_out.grad.chanunit{ii} = 'fT';
 end
 
-% Out argument (avoids some issues with FT<--> SPM conversion
+%% Return the data
+% SPM seems to lose some of the original Fieldtrip information, so the
+% safest thing to do is replace the trial (and grad) fields + return
 data_out_mfc = data;
 for i = 1:length(data.trial)
     data_out_mfc.trial{i} = data_out.trial{i};
@@ -81,17 +98,20 @@ if strcmp(cfg.correctgrad,'yes')
     data_out_mfc.grad = data_out.grad;
 end
 
-% Remove SPM + add Fieldtrip
+%% Remove SPM, Tim's OPM repo and re-add Fieldtrip
+disp('Removing SPM, OPM from your path...');
 close all force
+warning('off',id);
 rmpath(genpath(cfg.path_to_SPM));
 rmpath(cfg.path_to_OPM_repo);
+warning('on',id);
+disp('Adding Fieldtrip back your path...');
 addpath(ft_path);
 ft_defaults
 
 % Delete SPM data
 delete data.dat
 delete data.mat
-
 
 end
 
