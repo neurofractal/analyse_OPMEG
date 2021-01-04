@@ -4,20 +4,20 @@ function [data_out_mfc] = ft_wrapper_spm_opm_mfc(cfg,data)
 %
 %   cfg.path_to_SPM         = Path to SPM12
 %   cfg.path_to_OPM_repo    = Path to OPM repository which can be
-%                           downloaded from: 
+%                           downloaded from:
 %                           https://github.com/tierneytim/OPM
-%   cfg.correctgrad         = Correct the forward model ('yes' or no'; 
+%   cfg.correctgrad         = Correct the forward model ('yes' or no';
 %                             default = 'no'). This is experimental and
 %                             should be used with caution.
-% 
+%
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 %
 % Author for this wrapper:      Robert Seymour (rob.seymour@ucl.ac.uk)
 % Author of original SPM code:  Tim Tierney
 %
-% Citation: Tierney, T. M., Alexander, N., Mellor, S., Holmes, N., 
-% Seymour, R., O'Neill, G. C., ... & Barnes, G. R. (2020). Modelling 
-% optically pumped magnetometer interference as a mean (magnetic) field. 
+% Citation: Tierney, T. M., Alexander, N., Mellor, S., Holmes, N.,
+% Seymour, R., O'Neill, G. C., ... & Barnes, G. R. (2020). Modelling
+% optically pumped magnetometer interference as a mean (magnetic) field.
 % bioRxiv.
 %__________________________________________________________________________
 
@@ -25,7 +25,12 @@ function [data_out_mfc] = ft_wrapper_spm_opm_mfc(cfg,data)
 if ~isfield(cfg, 'correctgrad')
     cfg.correctgrad = 'no';
 end
-    
+
+%% Check the user has removed all non-MEG channels
+if length(data.label) ~= length(data.grad.label)
+    error('Different number of data channels between trial and grad structures');
+end
+
 %% Get Fieldtrip path and remove from your path
 [~, ft_path] = ft_version;
 % Little hack to turn off warnings
@@ -39,7 +44,7 @@ rmpath(fullfile(ft_path,'external','spm8'));
 
 %% Add SPM
 addpath(cfg.path_to_SPM);
-spm('defaults', 'eeg')
+spm('defaults', 'eeg');
 
 %% Some jiggery pokery to make it work
 % Change chantype of megmag
@@ -53,10 +58,22 @@ for ii = 1:length(data.grad.label)
 end
 
 %% Convert data from FT to SPM
-data_SPM = spm_eeg_ft2spm(data,'data');
+[data_SPM] = spm_eeg_ft2spm_OPM(data,'data');
+
+data_ft = data_SPM.ftraw;
 
 % Turn warnings back on
 warning('on',id);
+
+%% Check the conversion has happened properly
+data_ft = data_SPM.ftraw;
+x = data.trial{1};
+y = data_ft.trial{1};
+
+if ~isequal(x,y)
+    warning('FT to SPM conversion has not worked... Look at the data type conversion')
+end
+clear x y
 
 %% Add Tim's OPM repo
 try
@@ -80,7 +97,7 @@ end
 data_out = data_SPM_mfc.ftraw;
 
 %% Undoing the jiggery pokery
-% Change chanunit back to 'fT' 
+% Change chanunit back to 'fT'
 for ii = 1:length(data.grad.label)
     data_out.grad.chanunit{ii} = 'fT';
 end
@@ -114,13 +131,3 @@ delete data.dat
 delete data.mat
 
 end
-
-
-
-
-
-
-
-
-
-
