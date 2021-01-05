@@ -2,7 +2,7 @@
 fieldtripDir    = '/Users/rseymoue/Documents/scripts/fieldtrip-20191213';
 script_dir      = '/Users/rseymoue/Documents/GitHub/analyse_OPMEG';
 data_dir        = '/Volumes/Robert T5/20201209';
-save_dir        = '/Users/rseymoue/Dropbox/Research/Projects/2020/opm_benchmarking/optitrack';
+save_dir        = '/Users/rseymoue/Dropbox/Research/Projects/2021/opm_benchmarking/optitrack';
 denoise_dir     = '/Users/rseymoue/Documents/scripts/NoiseTools';
 NR4M_dir        = '/Users/rseymoue/Documents/GitHub/NR4M';
 scannercast_dir = '/Users/rseymoue/Documents/GitHub/scannercast/examples/NA';
@@ -33,16 +33,11 @@ cfg.bids.ses    = '001';
 cfg.bids.run    = '001';
 rawData         = ft_opm_create(cfg);
 
-%% Resample to 600Hz
-cfg                 = [];
-cfg.resamplefs      = 600;
-[rawData]           = ft_resampledata(cfg, rawData);
-
 %% Plot using ft_databrowser
 cfg             = [];
 cfg.viewmode    = 'butterfly';
 cfg.blocksize   = 20;
-ft_databrowser([],rawData);
+ft_databrowser(cfg,rawData);
 
 %% Select only OPM channels
 cfg             = [];
@@ -54,17 +49,25 @@ cfg                     = [];
 cfg.path_to_SPM         = '/Users/rseymoue/Documents/scripts/spm12';
 cfg.path_to_OPM_repo    = '/Users/rseymoue/Documents/GitHub/OPM';
 cfg.correctgrad         = 'yes';
+cfg.downsample          = 600;
 [rawData_MEG_mfc]       = ft_wrapper_spm_opm_mfc(cfg,rawData_MEG);
 
 %% PSD
 cfg                 = [];
 cfg.channel         = 'all';
-cfg.trial_length    = 10;
+cfg.trial_length    = 3;
 cfg.method          = 'tim';
-cfg.foi             = [1 150];
+cfg.foi             = [1 100];
 cfg.plot            = 'yes';
+cfg.transparency    = 0.2;
+cfg.plot_legend      = 'no';
 [pow freq]          = ft_opm_psd(cfg,rawData_MEG_mfc);
 ylim([1 1e4])
+
+%% Resample to 600Hz
+cfg                 = [];
+cfg.resamplefs      = 600;
+[rawData_MEG_ds]    = ft_resampledata(cfg, rawData_MEG);
 
 %% DSSP
 % Load the sourcemodel (3D mesh) and headmodel
@@ -94,12 +97,12 @@ ft_plot_sens(rawData.grad, 'style', 'r*','orientation','true'); view([0,0]);
 % DSSP
 cfg                     = [];
 cfg.sourcemodel         = lf_for_DSSP;
-cfg.dssp.n_space        = length(rawData_MEG.label)-2;
-cfg.dssp.n_in           = length(rawData_MEG.label)-2;
-cfg.dssp.n_out          = length(rawData_MEG.label)-2;
+cfg.dssp.n_space        = length(rawData_MEG_ds.label)-2;
+cfg.dssp.n_in           = length(rawData_MEG_ds.label)-2;
+cfg.dssp.n_out          = length(rawData_MEG_ds.label)-2;
 cfg.dssp.n_intersect    = 5;
 cfg.winsize             = 10;
-rawData_DSSP            = ft_dssp_window(cfg, rawData_MEG);
+rawData_DSSP            = ft_dssp_window(cfg, rawData_MEG_ds);
 
 % Plot the PSD
 cfg                 = [];
