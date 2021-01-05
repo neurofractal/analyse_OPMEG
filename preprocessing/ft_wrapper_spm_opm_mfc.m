@@ -41,7 +41,6 @@ rmpath(ft_path);
 rmpath(fullfile(ft_path,'external','spm12'));
 rmpath(fullfile(ft_path,'external','spm8'));
 
-
 %% Add SPM
 addpath(cfg.path_to_SPM);
 spm('defaults', 'eeg');

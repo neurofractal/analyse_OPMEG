@@ -54,6 +54,14 @@ if ~isfield(cfg, 'average')
     cfg.average = 'median';
 end
 
+if ~isfield(cfg, 'transparency')
+    cfg.transparency = 0.6;
+end
+
+if ~isfield(cfg, 'plot_ci')
+    cfg.plot_ci = 'yes';
+end
+
 %% Select the data based on cfg.channel option
 if strcmp(cfg.channel,'all')
     disp('Calculating PSD for ALL channels');
@@ -252,77 +260,29 @@ switch method_for_fft
             pow(:,:,j) =psdx;
         end
         
-        % Plot
-        if strcmp(cfg.plot,'yes')
-            
-            % Try loading a fancy colorscheme
-            try
-                colormap123     = linspecer(length(label));
-            catch
-                disp('Using default colorscheme')
-            end
-            
-            % Calculate median or mean out of all epochs
-            if strcmp(cfg.average,'median')
-                po = median(pow(:,:,:),3);
-            else
-                po = mean(pow(:,:,:),3);
-            end
-            
-            figure()
-            set(gcf,'Position',[100 100 1200 800]);
-            fig= gcf;
-            fig.Color=[1,1,1];
-            % Plot all channels
-            h = semilogy(freq,po,'LineWidth',1);
-            try
-                set(h, {'color'},num2cell(colormap123,2));
-            catch
-            end
-            hold on;
-            % Plot the mean in black
-            semilogy(freq,squeeze(mean(po,2)),'-k','LineWidth',2);
-            hold on
-            xp2 =0:round(freq(end));
-            yp2=ones(1,round(freq(end))+1)*15;
-            p2 =plot(xp2,yp2,'--k');
-            p2.LineWidth=2;
-            grid on
-            ax = gca; % current axes
-            ax.FontSize = 20;
-            ax.TickLength = [0.02 0.02];
-            
-            xlabel('Frequency (Hz)','FontSize',25)
-            labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-            ylabel(labY,'interpreter','latex','FontSize',25)
-            
-            % Adjust limits based on cfg.foi
-            xlim([cfg.foi(1), cfg.foi(end)]);
-            
-            % Plot legend
-            if strcmp(cfg.plot_legend,'yes')
-                if length(label) > 24
-                    [rrr,object_h] = ...
-                        columnlegend(2, vertcat(label, 'mean'),...
-                        'Location','northeastoutside','FontSize',14);
-                    
-                    % Fix Me: change FontSize?
-                    
-                    hl = findobj(object_h,'type','line');
-                    h2 = findobj(object_h,'type','text');
-                    set(hl,'LineWidth',5);
-                    
-                else
-                    % Legend
-                    [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
-                        'location','eastoutside');
-                    hl = findobj(hobj,'type','line');
-                    set(hl,'LineWidth',4);
-                    ht = findobj(hobj,'type','text');
-                    set(ht,'FontSize',12);
-                end
-            end
-        end
+%         % Check for outliers
+%         x = po(low_lim:high_lim,i)';
+%         y = mean_po(low_lim:high_lim)+(5*stdev_po(low_lim:high_lim));
+%         
+%         if ~all(y > x)
+%             fprintf('Outlier Chan: %10s?\n',rawData.label{i})
+%         end
+%         
+%         low_lim     = find(freq==cfg.foi(1));
+%         high_lim    = find(freq==cfg.foi(2));
+        
+% Plot
+if strcmp(cfg.plot,'yes')
+    % Calculate median or mean out of all epochs
+    if strcmp(cfg.average,'median')
+        po = median(pow(:,:,:),3);
+    else
+        po = mean(pow(:,:,:),3);
+    end
+    
+    plot_powspctrm(po,cfg,label,freq);
+    
+end
         
         %4. MATLAB's inbuilt pwelch
     case 'pwelch'
@@ -370,7 +330,6 @@ switch method_for_fft
          end
         
 end
-
 
 end
 
