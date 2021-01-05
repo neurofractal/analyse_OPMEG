@@ -26,6 +26,10 @@ if ~isfield(cfg, 'correctgrad')
     cfg.correctgrad = 'no';
 end
 
+if ~isfield(cfg, 'downsample')
+    cfg.downsample = 'no';
+end
+
 %% Check the user has removed all non-MEG channels
 if length(data.label) ~= length(data.grad.label)
     error('Different number of data channels between trial and grad structures');
@@ -64,16 +68,28 @@ data_ft = data_SPM.ftraw;
 % Turn warnings back on
 warning('on',id);
 
-%% Check the conversion has happened properly
-data_ft = data_SPM.ftraw;
-x = data.trial{1};
-y = data_ft.trial{1};
-
-if ~isequal(x,y)
-    warning('FT to SPM conversion has not worked... Look at the data type conversion')
+%% Downsample
+if isnumeric(cfg.downsample)
+    disp('Downsampling using spm_eeg_downsample...');
+    warning('Results might be suboptimal using this method...');
+    S        = [];
+    S.D      = data_SPM;
+    S.fsample_new = cfg.downsample;
+    data_SPM = spm_eeg_downsample(S)
 end
-clear x y
 
+%% Check the conversion has happened properly 
+% (Ignore when the data has been downsampled)
+if ~isnumeric(cfg.downsample)
+    data_ft = data_SPM.ftraw;
+    x = data.trial{1};
+    y = data_ft.trial{1};
+    
+    if ~isequal(x,y)
+        warning('FT to SPM conversion has not worked... Look at the data type conversion')
+    end
+    clear x y
+end
 %% Add Tim's OPM repo
 try
     addpath(cfg.path_to_OPM_repo);
@@ -114,6 +130,12 @@ if strcmp(cfg.correctgrad,'yes')
     data_out_mfc.grad = data_out.grad;
 end
 
+% Replace these values if the data has been downsampled
+if isnumeric(cfg.downsample)
+     data_out_mfc.time{i} = data_out.time{i};
+     data_out_mfc.fsample = cfg.downsample;
+end
+    
 %% Remove SPM, Tim's OPM repo and re-add Fieldtrip
 disp('Removing SPM, OPM from your path...');
 close all force
@@ -126,7 +148,23 @@ addpath(ft_path);
 ft_defaults
 
 % Delete SPM data
-delete data.dat
-delete data.mat
+try
+    if isnumeric(cfg.downsample)
+        delete data.dat
+        delete data.mat
+        delete ddata.dat
+        delete ddata.mat
+        delete MF_ddata.dat
+        delete MF_ddata.mat   
+    else
+        delete data.dat
+        delete data.mat
+        delete MF_data.dat
+        delete MF_data.mat
+    end
+    
+catch
+    warning('Could not delete SPM files...');
+end
 
 end
