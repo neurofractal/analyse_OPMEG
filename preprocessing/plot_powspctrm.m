@@ -34,7 +34,7 @@ end
 
 hold on;
 % Plot the mean in black
-plot(freq,mean_po,'-k','LineWidth',3);
+plot(freq,mean_po,'-k','LineWidth',2);
 hold on
 xp2 =0:round(freq(end));
 yp2=ones(1,round(freq(end))+1)*15;
@@ -59,9 +59,9 @@ end
 
 set(gca, 'YScale', 'log'); hold on;
 
-xlabel('Frequency (Hz)','FontSize',25)
+xlabel('Frequency (Hz)','FontSize',20)
 labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-ylabel(labY,'interpreter','latex','FontSize',25)
+ylabel(labY,'interpreter','latex','FontSize',20)
 
 % Adjust limits based on cfg.foi
 xlim([cfg.foi(1), cfg.foi(end)]);
