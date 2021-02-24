@@ -40,8 +40,7 @@ function [rawData] = ft_opm_create_chunks(cfg)
 % Copyright (C) 2020 Wellcome Trust Centre for Neuroimaging
 % Adapted from spm_opm_create (Tim Tierney)
 
-% Authors:  Nicholas Alexander  (n.alexander@ucl.ac.uk)
-%           Robert Seymour      (rob.seymour@ucl.ac.uk)
+% Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk)
 %__________________________________________________________________________
 
 %% Set default values
