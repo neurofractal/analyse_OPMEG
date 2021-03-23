@@ -1,3 +1,4 @@
+
 function sensorInfo = extractSensorPositions(cfg)
 % Extracts the orientations (rad and tan, sensor space)and the position of
 % sensors described by STL files.
@@ -540,11 +541,11 @@ Pz          = [centrePoint(:,3);centrePoint(:,3)];
 % the sensitive axis will need to be flipped
 corresponding_sens = cell(length(sensorListing)*2,1);
 if strcmp(cfg.slotori,'tan')
-    corresponding_sens(1:length(sensorListing))      = {'RAD'};
-    corresponding_sens(length(sensorListing)+1:end)  = {'TAN'};
-elseif strcmp(cfg.slotori,'rad')
     corresponding_sens(1:length(sensorListing))      = {'TAN'};
     corresponding_sens(length(sensorListing)+1:end)  = {'RAD'};
+elseif strcmp(cfg.slotori,'rad')
+    corresponding_sens(1:length(sensorListing))      = {'RAD'};
+    corresponding_sens(length(sensorListing)+1:end)  = {'TAN'};
 else
     corresponding_sens(1:end)                       = {'UNKNOWN'};
 end
