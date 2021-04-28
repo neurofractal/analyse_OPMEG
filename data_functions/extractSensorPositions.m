@@ -392,6 +392,7 @@ end
 
 % Plot the result
 if strcmp(cfg.plot,'yes')
+    disp('Making Figure...');
     figure(1);
     hold on;
     grid off;
@@ -414,7 +415,16 @@ if strcmp(cfg.plot,'yes')
         patch('Faces',scalpFaces,'Vertices',scalpVerts,'FaceVertexCData',cindex,'FaceColor','interp','EdgeAlpha',0);
         colormap(copper)
     end
-    hold off
+    hold off;
+    delete(findall(gcf,'Type','light'));
+    view([0,0]); camlight; print('sensor_pos_ori_1','-dpng','-r200');
+    view([-90,0]);     delete(findall(gcf,'Type','light')); camlight;
+    print('sensor_pos_ori_2','-dpng','-r200');
+    view([-180,0]);     delete(findall(gcf,'Type','light')); camlight;
+    print('sensor_pos_ori_3','-dpng','-r200');
+    view([90,0]);     delete(findall(gcf,'Type','light')); camlight;
+    print('sensor_pos_ori_4','-dpng','-r200');
+    
     % Ask if they are done with it.
     input('Press any key to continue (closes figure)\n')
     close all % Change this later. 

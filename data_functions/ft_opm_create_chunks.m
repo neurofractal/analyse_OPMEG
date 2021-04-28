@@ -162,7 +162,7 @@ count               = 1;
 % compute the number of samples and chunks
 
 % Read file in chunks to save memory
-Chunk = numChan*meg.SamplingFrequency*cfg.chunksize;
+Chunk = (numChan*meg.SamplingFrequency*cfg.chunksize)+numChan;
 Count = Chunk;    % Dummy value to satisfy WHILE condition
 
 while Count == Chunk
@@ -191,7 +191,8 @@ while Count == Chunk
     rawData.sampleinfo          = [sampleinfo_for_loop sampleinfo_for_loop+length(data(1,:))];
     
     % Save for next loop
-    time_for_loop       = rawData.time{1}(end)+(1/meg.SamplingFrequency);
+%    time_for_loop       = rawData.time{1}(end)+(1/meg.SamplingFrequency);
+    time_for_loop       = rawData.time{1}(end);
     sampleinfo_for_loop = rawData.sampleinfo(2)+1;
     
     % Construct a cfg file
@@ -233,7 +234,7 @@ while Count == Chunk
         %% Resample to 1000Hz
         disp(['Resampling Chunk... ' num2str(count)]);
         cfg2                 = [];
-        cfg2.resamplefs      = 1000;
+        cfg2.resamplefs      = 250;
         [rawData]            = ft_resampledata(cfg2, rawData);
         %rawData.sampleinfo   = sampleinfo./10;
     end

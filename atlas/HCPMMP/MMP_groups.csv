@@ -1,0 +1,181 @@
+ROI,Combined_ROI,value
+V1,Primary Visual Cortex (V1),1
+V2,Early Visual Cortex,2
+V3,Early Visual Cortex,2
+V4,Early Visual Cortex,2
+V3A,Dorsal Stream Visual Cortex,3
+V3B,Dorsal Stream Visual Cortex,3
+V6,Dorsal Stream Visual Cortex,3
+V6A,Dorsal Stream Visual Cortex,3
+V7,Dorsal Stream Visual Cortex,3
+IPS1,Dorsal Stream Visual Cortex,3
+V8,Ventral Stream Visual Cortex,4
+VVC,Ventral Stream Visual Cortex,4
+PIT,Ventral Stream Visual Cortex,4
+FFC,Ventral Stream Visual Cortex,4
+VMV1,Ventral Stream Visual Cortex,4
+VMV2,Ventral Stream Visual Cortex,4
+VMV3,Ventral Stream Visual Cortex,4
+V3CD,MT+ Complex and Neighboring Visual Areas,5
+LO1,MT+ Complex and Neighboring Visual Areas,5
+LO2,MT+ Complex and Neighboring Visual Areas,5
+LO3,MT+ Complex and Neighboring Visual Areas,5
+V4t,MT+ Complex and Neighboring Visual Areas,5
+FST,MT+ Complex and Neighboring Visual Areas,5
+MST,MT+ Complex and Neighboring Visual Areas,5
+MT,MT+ Complex and Neighboring Visual Areas,5
+PH,MT+ Complex and Neighboring Visual Areas,5
+4,Somatosensory and Motor Cortex,6
+3a,Somatosensory and Motor Cortex,6
+3b,Somatosensory and Motor Cortex,6
+1,Somatosensory and Motor Cortex,6
+2,Somatosensory and Motor Cortex,6
+24dd,Paracentral Lobular and Mid Cingulate Cortex,7
+24dv,Paracentral Lobular and Mid Cingulate Cortex,7
+6mp,Paracentral Lobular and Mid Cingulate Cortex,7
+6ma,Paracentral Lobular and Mid Cingulate Cortex,7
+SCEF,Paracentral Lobular and Mid Cingulate Cortex,7
+5m,Paracentral Lobular and Mid Cingulate Cortex,7
+5L,Paracentral Lobular and Mid Cingulate Cortex,7
+5mv,Paracentral Lobular and Mid Cingulate Cortex,7
+55b,Premotor Cortex,8
+6d,Premotor Cortex,8
+6a,Premotor Cortex,8
+FEF,Premotor Cortex,8
+6v,Premotor Cortex,8
+6r,Premotor Cortex,8
+PEF,Premotor Cortex,8
+43,Posterior Opercular Cortex,9
+FOP1,Posterior Opercular Cortex,9
+OP4,Posterior Opercular Cortex,9
+OP1,Posterior Opercular Cortex,9
+OP2-3,Posterior Opercular Cortex,9
+PFcm,Posterior Opercular Cortex,9
+A1,Early Auditory Cortex,10
+LBelt,Early Auditory Cortex,10
+MBelt,Early Auditory Cortex,10
+PBelt,Early Auditory Cortex,10
+RI,Early Auditory Cortex,10
+A4,Auditory Association Cortex,11
+A5,Auditory Association Cortex,11
+STSdp,Auditory Association Cortex,11
+STSda,Auditory Association Cortex,11
+STSvp,Auditory Association Cortex,11
+STSva,Auditory Association Cortex,11
+STGa,Auditory Association Cortex,11
+TA2,Auditory Association Cortex,11
+52,Insular and Frontal Opercular Cortex,12
+PI,Insular and Frontal Opercular Cortex,12
+Ig,Insular and Frontal Opercular Cortex,12
+PoI1,Insular and Frontal Opercular Cortex,12
+PoI2,Insular and Frontal Opercular Cortex,12
+FOP2,Insular and Frontal Opercular Cortex,12
+FOP3,Insular and Frontal Opercular Cortex,12
+MI,Insular and Frontal Opercular Cortex,12
+AVI,Insular and Frontal Opercular Cortex,12
+AAIC,Insular and Frontal Opercular Cortex,12
+Pir,Insular and Frontal Opercular Cortex,12
+FOP4,Insular and Frontal Opercular Cortex,12
+FOP5,Insular and Frontal Opercular Cortex,12
+H,Medial Temporal Cortex,13
+PreS,Medial Temporal Cortex,13
+EC,Medial Temporal Cortex,13
+PeEc,Medial Temporal Cortex,13
+PHA1,Medial Temporal Cortex,13
+PHA2,Medial Temporal Cortex,13
+PHA3,Medial Temporal Cortex,13
+PHT,Lateral Temporal Cortex,14
+TE1p,Lateral Temporal Cortex,14
+TE1m,Lateral Temporal Cortex,14
+TE1a,Lateral Temporal Cortex,14
+TE2p,Lateral Temporal Cortex,14
+TE2a,Lateral Temporal Cortex,14
+TGv,Lateral Temporal Cortex,14
+TGd,Lateral Temporal Cortex,14
+TF,Lateral Temporal Cortex,14
+TPOJ1,Temporo-Parieto-Occipital Junction,15
+TPOJ2,Temporo-Parieto-Occipital Junction,15
+TPOJ3,Temporo-Parieto-Occipital Junction,15
+STV,Temporo-Parieto-Occipital Junction,15
+PSL,Temporo-Parieto-Occipital Junction,15
+LIPv,Superior Parietal Cortex,16
+LIPd,Superior Parietal Cortex,16
+VIP,Superior Parietal Cortex,16
+AIP,Superior Parietal Cortex,16
+MIP,Superior Parietal Cortex,16
+7PC,Superior Parietal Cortex,16
+7AL,Superior Parietal Cortex,16
+7Am,Superior Parietal Cortex,16
+7PL,Superior Parietal Cortex,16
+7Pm,Superior Parietal Cortex,16
+PGp,Inferior Parietal Cortex,17
+PGs,Inferior Parietal Cortex,17
+PGi,Inferior Parietal Cortex,17
+PFm,Inferior Parietal Cortex,17
+PF,Inferior Parietal Cortex,17
+PFt,Inferior Parietal Cortex,17
+PFop,Inferior Parietal Cortex,17
+IP0,Inferior Parietal Cortex,17
+IP1,Inferior Parietal Cortex,17
+IP2,Inferior Parietal Cortex,17
+DVT,Posterior Cingulate Cortex,18
+ProS,Posterior Cingulate Cortex,18
+POS1,Posterior Cingulate Cortex,18
+POS2,Posterior Cingulate Cortex,18
+RSC,Posterior Cingulate Cortex,18
+d23ab,Posterior Cingulate Cortex,18
+v23ab,Posterior Cingulate Cortex,18
+31pv,Posterior Cingulate Cortex,18
+31pd,Posterior Cingulate Cortex,18
+31a,Posterior Cingulate Cortex,18
+23d,Posterior Cingulate Cortex,18
+23c,Posterior Cingulate Cortex,18
+PCV,Posterior Cingulate Cortex,18
+7m,Posterior Cingulate Cortex,18
+33pr,Anterior Cingulate and Medial Prefrontal Cortex,19
+p24pr,Anterior Cingulate and Medial Prefrontal Cortex,19
+a24pr,Anterior Cingulate and Medial Prefrontal Cortex,19
+p24,Anterior Cingulate and Medial Prefrontal Cortex,19
+a24,Anterior Cingulate and Medial Prefrontal Cortex,19
+p32pr,Anterior Cingulate and Medial Prefrontal Cortex,19
+a32pr,Anterior Cingulate and Medial Prefrontal Cortex,19
+d32,Anterior Cingulate and Medial Prefrontal Cortex,19
+p32,Anterior Cingulate and Medial Prefrontal Cortex,19
+s32,Anterior Cingulate and Medial Prefrontal Cortex,19
+8BM,Anterior Cingulate and Medial Prefrontal Cortex,19
+9m,Anterior Cingulate and Medial Prefrontal Cortex,19
+10v,Anterior Cingulate and Medial Prefrontal Cortex,19
+10r,Anterior Cingulate and Medial Prefrontal Cortex,19
+25,Anterior Cingulate and Medial Prefrontal Cortex,19
+47s,Orbital and Polar Frontal Cortex,20
+47m,Orbital and Polar Frontal Cortex,20
+a47r,Orbital and Polar Frontal Cortex,20
+11l,Orbital and Polar Frontal Cortex,20
+13l,Orbital and Polar Frontal Cortex,20
+a10p,Orbital and Polar Frontal Cortex,20
+p10p,Orbital and Polar Frontal Cortex,20
+10pp,Orbital and Polar Frontal Cortex,20
+10d,Orbital and Polar Frontal Cortex,20
+OFC,Orbital and Polar Frontal Cortex,20
+pOFC,Orbital and Polar Frontal Cortex,20
+44,Inferior Frontal Cortex,21
+45,Inferior Frontal Cortex,21
+IFJp,Inferior Frontal Cortex,21
+IFJa,Inferior Frontal Cortex,21
+IFSp,Inferior Frontal Cortex,21
+IFSa,Inferior Frontal Cortex,21
+47l,Inferior Frontal Cortex,21
+p47r,Inferior Frontal Cortex,21
+8C,DorsoLateral Prefrontal Cortex,22
+8Av,DorsoLateral Prefrontal Cortex,22
+i6-8,DorsoLateral Prefrontal Cortex,22
+s6-8,DorsoLateral Prefrontal Cortex,22
+SFL,DorsoLateral Prefrontal Cortex,22
+8BL,DorsoLateral Prefrontal Cortex,22
+9p,DorsoLateral Prefrontal Cortex,22
+9a,DorsoLateral Prefrontal Cortex,22
+8Ad,DorsoLateral Prefrontal Cortex,22
+p9-46v,DorsoLateral Prefrontal Cortex,22
+a9-46v,DorsoLateral Prefrontal Cortex,22
+46,DorsoLateral Prefrontal Cortex,22
+9-46d,DorsoLateral Prefrontal Cortex,22
