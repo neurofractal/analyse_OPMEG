@@ -58,6 +58,10 @@ if ~isfield(cfg, 'dB')
     cfg.dB = 'yes';
 end
 
+if ~isfield(cfg, 'transparency')
+    cfg.transparency = 1;
+end
+
 % Warn the user if the input isn't as expected
 if ~strcmp(cfg.method,'tim')
     ft_warning('Currently only cfg.method = ''tim'' is supported');
@@ -116,6 +120,14 @@ if strcmp(cfg.plot,'yes')
             set(h, {'color'},num2cell(colormap123,2));
         catch
         end
+        
+        % Change the transparency of the lines
+        if cfg.transparency ~= 1
+            for i = 1:size(shield,2)
+                h(i).Color(4) = cfg.transparency;
+            end
+        end
+        
         % Plot the mean in black
         if strcmp(cfg.method,'matlab')
             plot(freq,squeeze(mean(shield,1)),'-k','LineWidth',2);
@@ -136,12 +148,13 @@ if strcmp(cfg.plot,'yes')
     fig.Color=[1,1,1];
     xlabel('Frequency (Hz)','FontSize',30)
     if strcmp(cfg.dB,'yes')
-        labY = ['Shielding Factor (dB)'];
+        labY = ['Gain (dB)'];
+        ylabel(labY,'FontSize',30)
     else
         labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-    end
-    ylabel(labY,'interpreter','latex','FontSize',30)
     
+    ylabel(labY,'interpreter','latex','FontSize',30)
+    end
     % Adjust limits based on cfg.foi
     xlim([cfg.foi(1), cfg.foi(end)]);
     %ylim([1, 1000]);

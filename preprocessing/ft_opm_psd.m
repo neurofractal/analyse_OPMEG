@@ -62,6 +62,10 @@ if ~isfield(cfg, 'plot_ci')
     cfg.plot_ci = 'yes';
 end
 
+if ~isfield(cfg, 'plot_chans')
+    cfg.plot_chans = 'yes';
+end
+
 %% Select the data based on cfg.channel option
 if strcmp(cfg.channel,'all')
     disp('Calculating PSD for ALL channels');

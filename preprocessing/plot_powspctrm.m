@@ -21,14 +21,16 @@ set(gcf,'Position',[100 100 1200 800]);
 fig= gcf;
 fig.Color=[1,1,1];
 
-% Plot all channels
-h = plot(freq,po','LineWidth',0.5);
-set(h, {'color'},num2cell(colormap123,2));
-
-% Change the transparency of the lines
-if cfg.transparency ~= 1
-    for i = 1:size(po,2)
-        h(i).Color(4) = cfg.transparency;
+if strcmp(cfg.plot_chans,'yes')
+    % Plot all channels
+    h = plot(freq,po','LineWidth',0.5);
+    set(h, {'color'},num2cell(colormap123,2));
+    
+    % Change the transparency of the lines
+    if cfg.transparency ~= 1
+        for i = 1:size(po,2)
+            h(i).Color(4) = cfg.transparency;
+        end
     end
 end
 
@@ -59,34 +61,36 @@ end
 
 set(gca, 'YScale', 'log'); hold on;
 
-xlabel('Frequency (Hz)','FontSize',20)
+xlabel('Frequency (Hz)','FontSize',25)
 labY = ['$$PSD (' 'fT' ' \sqrt[-1]{Hz}$$)'];
-ylabel(labY,'interpreter','latex','FontSize',20)
+ylabel(labY,'interpreter','latex','FontSize',25)
 
 % Adjust limits based on cfg.foi
 xlim([cfg.foi(1), cfg.foi(end)]);
 
 % Plot legend
-if strcmp(cfg.plot_legend,'yes')
-    if length(label) > 24
-        [rrr,object_h] = ...
-            columnlegend(2, vertcat(label, 'mean'),...
-            'Location','northeastoutside','FontSize',14);
-        
-        % Fix Me: change FontSize?
-        
-        hl = findobj(object_h,'type','line');
-        h2 = findobj(object_h,'type','text');
-        set(hl,'LineWidth',5);
-        
-    else
-        % Legend
-        [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
-            'location','eastoutside');
-        hl = findobj(hobj,'type','line');
-        set(hl,'LineWidth',4);
-        ht = findobj(hobj,'type','text');
-        set(ht,'FontSize',12);
+if strcmp(cfg.plot_chans,'yes')
+    if strcmp(cfg.plot_legend,'yes')
+        if length(label) > 24
+            [rrr,object_h] = ...
+                columnlegend(2, vertcat(label, 'mean'),...
+                'Location','northeastoutside','FontSize',14);
+            
+            % Fix Me: change FontSize?
+            
+            hl = findobj(object_h,'type','line');
+            h2 = findobj(object_h,'type','text');
+            set(hl,'LineWidth',5);
+            
+        else
+            % Legend
+            [~, hobj, ~, ~] = legend(vertcat(label, 'mean'),...
+                'location','eastoutside');
+            hl = findobj(hobj,'type','line');
+            set(hl,'LineWidth',4);
+            ht = findobj(hobj,'type','text');
+            set(ht,'FontSize',12);
+        end
     end
 end
 end
