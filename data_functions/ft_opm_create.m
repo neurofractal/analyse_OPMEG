@@ -212,6 +212,7 @@ if positions
     % Find the position of the channels in overall channel list
     find_chan = contains(channels.name,posOri.label);
     rawData.grad.chanunit   = channels.units(find_chan);
+    rawData.grad.chantype   = channels.type(find_chan);
     rawData.grad.tra = diag(ones(1,length(rawData.grad.label)));
 
 end
