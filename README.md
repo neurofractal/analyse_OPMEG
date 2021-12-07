@@ -5,14 +5,15 @@
 
 Copyright (C) 2020-21 Wellcome Trust Centre for Neuroimaging
 
-Authors:  Robert Seymour      (rob.seymour@ucl.ac.uk);
-          Nicholas Alexander  (n.alexander@ucl.ac.uk);
-          Tim West
-          George O'Neill
+Authors:  
+- Robert Seymour (rob.seymour@ucl.ac.uk)
+- Nic Alexander  (n.alexander@ucl.ac.uk);
+- Tim West
+- George O'Neill
           
 ### Load in data
 
-Data from the UCL OP-MEG lab is stored in .bin format, with BIDS-compliant descriptor files `(channels.tsv, meg.json, coordinatesystem.json, positions.tsv etc.)`
+Data from the UCL OP-MEG lab is stored in .bin format, with BIDS-compliant descriptor files, for example: `channels.tsv`, `meg.json`, `coordinatesystem.json`, `positions.tsv`.
 
 **Method 1:**
 ```matlab
@@ -38,6 +39,7 @@ cfg             = [];
 cfg.data        = path_to_bin_file;
 %                 (requires .json and _channels.tsv in same folder
 %                 with same name as the .bin file)
+rawData         = ft_opm_create(cfg);
 ```
 
 
