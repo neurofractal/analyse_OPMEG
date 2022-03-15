@@ -1,12 +1,6 @@
 %% Subfunctions for buttons
-% function pb_call2(varargin)
-% %     disp('NOT Flipped');
-%     uiresume;
-%     return
-% end
-
 function pb_call(hObject,~)
-    hObject.UserData = struct('moveon',1);
+    hObject.Parent.UserData = 'moveon';
 %     disp('Flipped');
     uiresume;
     return
