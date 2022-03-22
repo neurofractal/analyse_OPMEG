@@ -14,6 +14,8 @@ function [comp2remove] = ft_RS_ICviewer(cfg,comp)
 %                       (default = [1 100]).
 %   cfg.trial_length    = size of chunks used for PSD calculation
 %                       (default = 10)
+%   cfg.sort            = statistical property to sort presentation of ICs
+%                         (['no'],'kurtosis','autocorrelation')
 %   cfg.save            = save a .png of removed comps? (default = 'no')
 %   
 %__________________________________________________________________________
@@ -39,6 +41,10 @@ if ~isfield(cfg, 'layout')
     warning('Will not work without a layout file')
 end
 
+if ~isfield(cfg, 'sort')
+    cfg.sort = 'no';
+end
+
 %% Start of function proper
 % Calculate PSD
 
@@ -51,6 +57,38 @@ cfg2.plot            = 'no';
 
 % Make sure there are no nans (and take mean)
 po                  = nanmean(pow(:,:,:),3);
+
+%% Sort by various statistical properties of the ICs
+if strcmp(cfg.sort,'kurtosis')
+    disp('Sorting componenets by kurtosis value')
+    % Kurtosis
+kurt = kurtosis(comp.trial{1},[],2);
+kurt = kurt(:);
+metrics.kurtosis.raw = kurt-3;
+% metrics.kurtosis.log = log(kurt-3);
+% metrics.kurtosis.abs = abs(demean(boxcox1(kurt))); % make distribution more normal to better balance low/high kurtosis
+
+[~,sorted_comps] = sort(metrics.kurtosis.raw,'descend');
+
+elseif strcmp(cfg.sort,'autocorrelation')
+    disp('Sorting components by autocorrelation with cardiac signal')
+    bpm_range = [50 100]./60;
+    maxlags = 2*comp.fsample;
+    [~,lags] = xcorr(comp.trial{1}(1,:),maxlags,'coeff');
+    lags = lags./comp.fsample;
+    lags_range = lags>bpm_range(1) & lags<bpm_range(2);
+    ac_max = zeros(1,length(comp.label));
+    for ic = 1:length(comp.label)
+        [tc_bp] =  ft_preproc_lowpassfilter(comp.trial{1}(ic,:), comp.fsample, 48);
+        ac = xcorr(tc_bp,maxlags,'coeff');
+        ac_max(ic) = max(ac(lags_range));
+    end
+    metrics.cardiac_autocorrelation.value = ac_max(:);
+    [~,sorted_comps] = sort(metrics.cardiac_autocorrelation.value,'descend');
+
+else
+    sorted_comps = [1:length(comp.label)];
+end
 
 % Use Brewermap :colors RdBu
 ft_hastoolbox('brewermap',1);
@@ -66,6 +104,7 @@ S.f = figure;
 while cont
 
     set(gcf, 'Position',  [300, 100, 1100, 900]);
+
     %create two pushbttons
     S.pb = uicontrol(S.f,'style','togglebutton',...
         'units','pix',...
@@ -97,12 +136,12 @@ while cont
     % Find limits of y-axis
     [minDistance, indexOfMin] = min(abs(freq-cfg.foi(1)));
     [minDistance, indexOfMax] = min(abs(freq-cfg.foi(2)));
-    max_lim = max(po(indexOfMin:indexOfMax,c))*1.1;
-    min_lim = min(po(indexOfMin:indexOfMax,c))*1.1;
+    max_lim = max(po(indexOfMin:indexOfMax,sorted_comps(c)))*1.1;
+    min_lim = min(po(indexOfMin:indexOfMax,sorted_comps(c)))*1.1;
 
     % Plot topoplot
     cfg2 = [];
-    cfg2.component = c;       % specify the component(s) that should be plotted
+    cfg2.component = sorted_comps(c);       % specify the component(s) that should be plotted
     cfg2.layout    = cfg.layout; % specify the layout file that should be used for plotting
     cfg2.comment   = 'no';
     cfg2.figure    = S.f;
@@ -118,7 +157,7 @@ while cont
 
     % Plot the raw data from 1-11s
     subplot(8,4,[28:32]);
-    plot(comp.time{1},comp.trial{1}(c,1:end),'linewidth',2);
+    plot(comp.time{1},comp.trial{1}(sorted_comps(c),1:end),'linewidth',2);
     xlim([1 11]);
     set(gca,'FontSize',16) % Creates an axes and sets its FontSize to 18
     xlabel('Time(s)','FontSize',23);
@@ -126,13 +165,18 @@ while cont
 
     % Plot PSD
     subplot(8,4,[1:2 5:6 9:10 13:14]);
-    semilogy(freq,po(:,c),'-k','LineWidth',2);
+    semilogy(freq,po(:,sorted_comps(c)),'-k','LineWidth',2);
     xlim([cfg.foi(1) cfg.foi(2)]);
     set(gca,'FontSize',16) % Creates an axes and sets its FontSize to 18
     xlabel('Frequency (Hz)','FontSize',23)
     labY = ['$$PSD (a.u.) $$'];
     ylabel(labY,'interpreter','latex','FontSize',23)
     ylim([min_lim max_lim]);
+    
+    annotation('textbox', [0.21,0.332222223248747,...
+        0.294090900597247,0.045555554529031],...
+        'string', ['Plotted Component: ' num2str(c) ' of ' ...
+        num2str(length(comp.label))],'FontSize',14,'EdgeColor','None');
 
 
     % Wait for user input
@@ -142,14 +186,14 @@ while cont
     if strcmp(S.f.UserData,'EXIT')
         cont = 0;
     elseif strcmp(S.f.UserData,'REMOVE')
-        comp2remove = vertcat(comp2remove,c);
+        comp2remove = vertcat(comp2remove,sorted_comps(c));
         disp('');
-        disp(['Component ' num2str(c) ' = BAD']);
+        disp(['Component ' num2str(sorted_comps(c)) ' = BAD']);
         disp('');
 
         % Save a picture if required
         if strcmp(cfg.save, 'yes')
-            print(['component_' num2str(c)],'-dpng','-r100');
+            print(['component_' num2str(sorted_comps(c))],'-dpng','-r100');
         end
 
     end
