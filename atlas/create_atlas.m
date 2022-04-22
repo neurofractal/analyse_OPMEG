@@ -31,15 +31,15 @@ rhctable.struct_names(1,:) = [];
 % Compensate for number of parcels in LH
 rhix = rhix+max(lhix);
 
-% 
-% % visualize Surfaces
-% figure('Name','Data Conversion','NumberTitle','off','color','w');
-% subplot(1,2,1)
-% title('Surface data');
-% patch('Faces',lhfaces+1,'Vertices',lhvtx,'FaceColor','interp','EdgeColor','none','Facevertexcdata',lhix)
-% patch('Faces',rhfaces+1,'Vertices',rhvtx,'FaceColor','interp','EdgeColor','none','Facevertexcdata',rhix)
-% axis equal
-% axis([-80,80,-110,80])
+
+% visualize Surfaces
+figure('Name','Data Conversion','NumberTitle','off','color','w');
+subplot(1,2,1)
+title('Surface data');
+patch('Faces',lhfaces+1,'Vertices',lhvtx,'FaceColor','interp','EdgeColor','none','Facevertexcdata',lhix)
+patch('Faces',rhfaces+1,'Vertices',rhvtx,'FaceColor','interp','EdgeColor','none','Facevertexcdata',rhix)
+axis equal
+axis([-80,80,-110,80])
 
 % load SPM Canonical Brain
 nii=spm_vol('D:\scripts\fieldtrip-20210606\template\anatomy\single_subj_T1.nii');
@@ -74,28 +74,28 @@ nii.fname=['aparc_SPM',suffx,'.nii'];
 spm_write_vol(nii,nii.img);
 gzip(['aparc_SPM',suffx,'.nii']);
 
-% % visualize volumetric data
-% subplot(1,2,2)
-% title('Volumetric data');
-% for reg=1:max(rhix)
-%     fv=isosurface(nii.img==reg,0.5);
-%     try % swap xy entries for non-empty labels (as per xy swap in isosurface).
-%         fv.vertices=[fv.vertices(:,2),fv.vertices(:,1),fv.vertices(:,3)];
-%     end
-%     afv(reg).vertices=fv.vertices;
-%     afv(reg).faces=fv.faces;
-%     afv(reg).facevertexcdata=repmat(reg,length(fv.vertices),1);
-% end
-% afv=ea_concatfv(afv);
-% 
-% % convert vertices from voxel to mm space
-% afv.vertices=[afv.vertices,ones(length(afv.vertices),1)]';
-% afv.vertices=nii.mat*afv.vertices;
-% afv.vertices=afv.vertices(1:3,:)';
-% patch(afv,'EdgeColor','none','FaceColor','interp')
-% axis equal
-% axis([-80,80,-110,80]); 
-% alpha 0.5;
+% visualize volumetric data
+subplot(1,2,2)
+title('Volumetric data');
+for reg=1:max(rhix)
+    fv=isosurface(nii.img==reg,0.5);
+    try % swap xy entries for non-empty labels (as per xy swap in isosurface).
+        fv.vertices=[fv.vertices(:,2),fv.vertices(:,1),fv.vertices(:,3)];
+    end
+    afv(reg).vertices=fv.vertices;
+    afv(reg).faces=fv.faces;
+    afv(reg).facevertexcdata=repmat(reg,length(fv.vertices),1);
+end
+afv=ea_concatfv(afv);
+
+% convert vertices from voxel to mm space
+afv.vertices=[afv.vertices,ones(length(afv.vertices),1)]';
+afv.vertices=nii.mat*afv.vertices;
+afv.vertices=afv.vertices(1:3,:)';
+patch(afv,'EdgeColor','none','FaceColor','interp')
+axis equal
+axis([-80,80,-110,80]); 
+alpha 0.5;
 
 %% Reead the atlas
 atlas = ft_read_atlas('aparc_SPM.nii');
