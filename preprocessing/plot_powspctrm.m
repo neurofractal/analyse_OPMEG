@@ -73,8 +73,8 @@ if strcmp(cfg.plot_chans,'yes')
     if strcmp(cfg.plot_legend,'yes')
         if length(label) > 24
             [rrr,object_h] = ...
-                columnlegend(2, vertcat(label, 'mean'),...
-                'Location','northeastoutside','FontSize',14);
+                columnlegend(3, vertcat(label, 'mean'),...
+                'Location','northeastoutside','FontSize',10);
             
             % Fix Me: change FontSize?
             
