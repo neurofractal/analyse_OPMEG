@@ -1,6 +1,17 @@
 function trl = OPM_trialfun_usemat(cfg)
+% OPM_trialfun_usemat is a custom trial function for data loaded into
+% memory
+%
+% Copyright (C) 2021-22, Robert Seymour
+% Wellcome Centre for Human Neuroimaging, UCL
 
+% set the defaults
+cfg.threshold               = ft_getopt(cfg, 'threshold', 3);
+cfg.detectflank    =  ft_getopt(cfg, 'detectflank', 'up');
 
+disp(cfg.detectflank)
+
+% Find channel with trigger info
 pos_of_trig = contains(cfg.rawData.hdr.label,cfg.trialdef.trigchan);
 
 % % Read header
@@ -26,11 +37,17 @@ eventCont           = cfg.rawData.trial{1}(pos_of_trig,:);
 time                = cfg.rawData.time{1};
 sample              = 1:length(time);
 % convert to binary
-eventDisc           = (eventCont > 3);
+eventDisc           = (eventCont > cfg.threshold);
 
 % find first sample. first find differences
 tmp                 = eventDisc - [0,eventDisc(1:end-1)];
-tmp2                = (tmp == 1);
+
+% Trigger based on flank up or down
+if strcmp(cfg.detectflank,'up')
+    tmp2                = (tmp == 1);
+elseif strcmp(cfg.detectflank,'down')
+    tmp2                = (tmp == -1);
+end
 events              = sample(tmp2)';
 events              = round(events);
 
