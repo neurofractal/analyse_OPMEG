@@ -38,17 +38,22 @@ pos.chanori             = [posAll.Ox posAll.Oy posAll.Oz];
 
 pos.label = cellstr(pos.label);
 
-% Remove the G2 part of the channel name
-try
-    % There is probably a more efficient way to do this...
-    indx = find(contains(pos.label,'G2'));
-    
-    for i = 1:length(indx)
-        to_replace = char(pos.label(indx(i)));
-        to_replace = to_replace(4:end);
-        pos.label(indx(i)) = {to_replace};
+% For older data from UCL OPM lab (where chan names ended -RAD or -TAN),
+% analyse_OPMEG removed the G2 prefix. Don't do this for newer data, but
+% do for older data:
+if any(contains(pos.label,"RAD"))
+    % Remove the G2 part of the channel name
+    try
+        % There is probably a more efficient way to do this...
+        indx = find(contains(pos.label,'G2'));
+
+        for i = 1:length(indx)
+            to_replace = char(pos.label(indx(i)));
+            to_replace = to_replace(4:end);
+            pos.label(indx(i)) = {to_replace};
+        end
+    catch
     end
-catch
 end
 
 end
