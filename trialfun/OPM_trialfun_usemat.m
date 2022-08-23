@@ -12,7 +12,8 @@ cfg.detectflank    =  ft_getopt(cfg, 'detectflank', 'up');
 disp(cfg.detectflank)
 
 % Find channel with trigger info
-pos_of_trig = contains(cfg.rawData.hdr.label,cfg.trialdef.trigchan);
+pos_of_trig = contains(cfg.rawData.label,cfg.trialdef.trigchan);
+
 
 % % Read header
 % hdr              = ft_read_header(strcat(cfg.dataset(1:end-3),'mat'));
