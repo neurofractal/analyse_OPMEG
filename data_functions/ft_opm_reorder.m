@@ -45,7 +45,7 @@ if length(rawData_out.hdr.label) == length(label_data)
     rawData_out.hdr.label = rawData_out.hdr.label(comb);
     rawData_out.hdr.chantype = rawData_out.hdr.chantype(comb);
     rawData_out.hdr.chanunit = rawData_out.hdr.chanunit(comb);
-    rawData_out.hdr.fieldori = rawData_out.hdr.fieldori(comb);
+    %rawData_out.hdr.fieldori = rawData_out.hdr.fieldori(comb);
 else
     warning('Removing hdr information');
     rawData_out = rmfield(rawData_out,'hdr');
