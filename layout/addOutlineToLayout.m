@@ -64,3 +64,5 @@ slotLayout.mask{1} = slotLayout.outline{1};
 if plot
 	ft_plot_layout(slotLayout)
 end
+
+lay = slotLayout;
