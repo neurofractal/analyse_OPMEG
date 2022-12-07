@@ -48,9 +48,9 @@ tmp2                = (tmp == 1);
 % Trigger based on flank down
 tmp3               = (tmp == -1);
 
-events_begin        = sample(tmp2)';
+events_begin        = sample(tmp2)' - (cfg.trialdef.prestim * cfg.rawData.fsample);
 events_begin        = round(events_begin);
-events_end        = sample(tmp3)';
+events_end        = sample(tmp3)' + (cfg.trialdef.poststim * cfg.rawData.fsample);
 events_end        = round(events_end);
 
 if ~isempty(cfg.correct_time)
@@ -78,7 +78,7 @@ for j = 1:length(events_begin)
     else
         trlbegin = events_begin(j);
         trlend   = events_end(j);
-        offset        = 0;
+        offset        = -(cfg.trialdef.prestim * cfg.rawData.fsample);
         trl(end+1, :) = ([trlbegin trlend offset j]);
     end
 end
