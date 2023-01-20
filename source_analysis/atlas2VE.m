@@ -52,6 +52,15 @@ if strcmp(cfg.channel,'all')
     cfg.channel = atlas.tissuelabel;
 end
 
+% If atlas has a parcellation field but no tissue field, fix this
+if ~isfield(atlas,'tissue') && isfield(atlas,'parcellation')
+    atlas.tissue = atlas.parcellation;
+    try
+        atlas.tissuelabel = atlas.parcellationlabel;
+    catch
+    end
+end
+    
 % Interpolate atlas
 cfg2 = [];
 cfg2.interpmethod = 'nearest';
