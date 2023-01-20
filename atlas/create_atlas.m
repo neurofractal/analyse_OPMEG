@@ -1,5 +1,5 @@
 % 
-cd('D:\Github\analyse_OPMEG\atlas\dk_atlas')
+cd('D:\Github\analyse_OPMEG\atlas\local_global')
 
 % Add Freesurfer_tools and SPM to your path
 addpath('D:\Github\OPMsurfer\freesurfer_tools');
@@ -10,7 +10,7 @@ visualize=1; % set to 0 if you don't need to visualize
 reslice=0; % set to 1 if you want to produce an 0.5 mm version, too.
 
 % load in LH
-[~, lhlab,lhctable]=read_annotation('lh.aparc.annot');
+[~, lhlab,lhctable]=read_annotation('lh.Schaefer2018_100Parcels_17Networks_order.annot');
 [lhvtx,lhfaces]=read_surf('lh.pial');
 
 % Delete first superfluous row
@@ -20,7 +20,7 @@ lhctable.struct_names(1,:) = [];
 [~,lhix]=ismember(lhlab,lhctable.table(:,5));
 
 % load in RH
-[~, rhlab,rhctable]=read_annotation('rh.aparc.annot');
+[~, rhlab,rhctable]=read_annotation('rh.Schaefer2018_100Parcels_17Networks_order.annot');
 [rhvtx,rhfaces]=read_surf('rh.pial');
 
 % Delete first superfluous row
@@ -69,10 +69,10 @@ nii.img(sub2ind(size(nii.img),xx,yy,zz))=ldat(assign);
 
 %nii.img(nii.img>0)=nii.img(nii.img>0)-1; % first entry in table.table is an indexing entry
 
-nii.fname=['aparc_SPM',suffx,'.nii'];
+nii.fname=['Schaefer2018_100Parcels_17Networks',suffx,'.nii'];
 %nii.dt=[16,0];
 spm_write_vol(nii,nii.img);
-gzip(['aparc_SPM',suffx,'.nii']);
+gzip(['Schaefer2018_100Parcels_17Networks',suffx,'.nii']);
 
 % visualize volumetric data
 subplot(1,2,2)
@@ -98,30 +98,32 @@ axis([-80,80,-110,80]);
 alpha 0.5;
 
 %% Reead the atlas
-atlas = ft_read_atlas('aparc_SPM.nii');
+atlas = ft_read_atlas('Schaefer2018_100Parcels_17Networks.nii');
 count = 1;
 atlas.coordsys = 'mni';
 
 %% Add tissue labels
 % LH
 for h = 1:length(lhctable.struct_names)
-    atlas.tissuelabel{count,1} = ['LH_' lhctable.struct_names{h}];
-    atlas.parcellationlabel{count,1} = ['LH_' lhctable.struct_names{h}];
+    atlas.tissuelabel{count,1} = ['LH_' lhctable.struct_names{h}(15:end)];
+    atlas.parcellationlabel{count,1} = ['LH_' lhctable.struct_names{h}(15:end)];
     count = count+1;
 end
 
 % RH
 for h = 1:length(rhctable.struct_names)
-    atlas.tissuelabel{count,1} = ['RH_' rhctable.struct_names{h}];
-    atlas.parcellationlabel{count,1} =  ['RH_' rhctable.struct_names{h}];
+    atlas.tissuelabel{count,1} = ['RH_' rhctable.struct_names{h}(15:end)];
+    atlas.parcellationlabel{count,1} =  ['RH_' rhctable.struct_names{h}(15:end)];
     count = count+1;
 end
 
 %% Save
-save atlas_dk_SPM atlas;
+atlas.tissue = atlas.parcellation;
+
+save atlas_Schaefer_2018_SPM atlas;
 
 %% Try loading in the atlas again
-atlas = ft_read_atlas('atlas_dk_SPM.mat');
+atlas = ft_read_atlas('atlas_Schaefer_2018_SPM.mat');
 
 
 
