@@ -56,23 +56,17 @@ end
 if ~isfield(cfg, 'nSamples')
     cfg.nSamples   = 1000;
 end
-if ~isfield(cfg, 'nDens')
-    cfg.nDens   = 40;
-end
-if ~isfield(cfg, 'space')
-    cfg.space  = 30;
-end
-if ~isfield(cfg, 'offset')
-    cfg.offset  = 6.5;
-end
-if ~isfield(cfg, 'wholehead')
-    cfg.wholehead = 1;
-end
+
+
 if ~isfield(cfg, 'fname')
     cfg.fname = 'sim_opm';
 end
 if ~isfield(cfg, 'precision')
     cfg.precision = 'double';
+end
+
+if ~isfield(cfg, 'load_events')
+    cfg.load_events = 'yes';
 end
 
 %% Determine whether to use cfg.data or cfg.folder
@@ -175,6 +169,17 @@ catch
     end      
 end
 
+% Load events.tsv file if possible
+if strcmp(cfg.load_events,'yes')
+    try
+        event = ft_read_event(...
+            path_to_bin_file,'headerformat', 'opm_fil',...
+            'eventformat', 'opm_fil');
+    catch
+        event = [];
+    end
+end
+
 %% Make the main fieldtrip structure
 % Main structure
 rawData                     = [];
@@ -201,6 +206,9 @@ rawData.hdr.nSamples        = length(data(1,:));
 rawData.hdr.nTrials         = 1;
 rawData.hdr.nSamplesPre     = 0;
 rawData.hdr.fieldori        = channels.fieldori;
+if strcmp(cfg.load_events,'yes')
+    rawData.hdr.event = event;
+end
 
 if positions
     rawData.grad.chanpos    = posOri.chanpos;
