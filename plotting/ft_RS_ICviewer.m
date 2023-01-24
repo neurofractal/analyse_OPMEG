@@ -158,7 +158,7 @@ while cont
     % Plot the raw data from 1-11s
     subplot(8,4,[28:32]);
     plot(comp.time{1},comp.trial{1}(sorted_comps(c),1:end),'linewidth',2);
-    xlim([1 11]);
+    xlim([comp.time{1}(1) comp.time{1}(1)+10]);
     set(gca,'FontSize',16) % Creates an axes and sets its FontSize to 18
     xlabel('Time(s)','FontSize',23);
     ylabel({'Magnetic';'Field'},'FontSize',23);

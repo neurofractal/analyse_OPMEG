@@ -1,15 +1,16 @@
 function trl = OPM_trialfun_Filbury(cfg)
-% OPM_trialfun_usemat is a custom trial function for data loaded into
-% memory
+% OPM_trialfun_Filbury is a custom trial function for Filbury data 
+% % that will create variable-length events triggered by the 
+% onset/offset of one trigger channel.
 %
-% Copyright (C) 2021-22, Robert Seymour
+% Copyright (C) 2021-22, Robert Seymour, Nic Alexander
 % Wellcome Centre for Human Neuroimaging, UCL
 
 % set the defaults
-cfg.threshold               = ft_getopt(cfg, 'threshold', 3);
-cfg.detectflank    =  ft_getopt(cfg, 'detectflank', 'up');
-
-disp(cfg.detectflank)
+cfg.threshold         = ft_getopt(cfg, 'threshold', 3);
+cfg.detectflank       =  ft_getopt(cfg, 'detectflank', 'up');
+cfg.trialdef.prestim  = ft_getopt(cfg.trialdef, 'prestim', 0);
+cfg.trialdef.poststim = ft_getopt(cfg.trialdef, 'poststim', 0);
 
 % Find channel with trigger info
 pos_of_trig = contains(cfg.rawData.label,cfg.trialdef.trigchan);
@@ -52,6 +53,11 @@ events_begin        = sample(tmp2)' - (cfg.trialdef.prestim * cfg.rawData.fsampl
 events_begin        = round(events_begin);
 events_end        = sample(tmp3)' + (cfg.trialdef.poststim * cfg.rawData.fsample);
 events_end        = round(events_end);
+
+% If trigger didn't go down (at the end of a block) add this
+if length(events_begin) ~= length(events_end)
+    events_end(end+1) = sample(end)
+end
 
 if ~isempty(cfg.correct_time)
     disp(['Correcting timing by ' num2str(cfg.correct_time) 's']);
