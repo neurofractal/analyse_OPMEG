@@ -1,4 +1,4 @@
-function [filename] = bidsFilename(bids,description,type,derivative,detailed)
+function [filename] = bidsFilename(bids,description,type,derivative,detailedFile,bidsCategory)
 % Function to create a BIDS style filename. It is useful for saving and
 % loading data. Use as:
 % Usual bids info as structure containing strings
@@ -10,7 +10,9 @@ function [filename] = bidsFilename(bids,description,type,derivative,detailed)
 % description		= 'test'; % Describe the file. e.g. 'freqData'
 % type			= '.mat'; % Usually a .mat
 % derivative		= true; % Place in derivative folder or main folder?
-% detailed		= true; % Include ses,run,task info?
+% detailedFilename	= true; % Include ses,run,task info in filename?
+% bidsCategory		= true; % Can be empty, or 'meg'/'mot'/'beh' etc. It will
+%						reference the appropriate sub-folder, including ses.
 %
 % Author: Nicholas Alexander, n.alexander@ucl.ac.uk
 
@@ -22,17 +24,27 @@ if isfolder(bids.directory)
 	end
 	% If using the derivative folder, add that on, including sub
 	if derivative
-		bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\',bids.directory,bids.sub);
+		if ~isempty(bidsCategory)
+			bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\ses-%3$s\\%4$s\\',bids.directory,bids.sub,bids.ses,bidsCategory);
+		else
+			bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\',bids.directory,bids.sub);
+		end
+
+		
 
 		% Check that directory exists with the derivative folder
 		if ~isfolder(bids.directory)
 			warning("Creating new derivatives directory")
 			mkdir(bids.directory);
 		end
+	% Otherwise just add the subject folder
 	else
-		% Otherwise just add the subject folder
-		bids.directory = sprintf('%1$ssub-%2$s\\',bids.directory,bids.sub);
-
+		if ~isempty(bidsCategory)
+			bids.directory = sprintf('%1$ssub-%2$s\\ses-%3$s\\%4$s\\',bids.directory,bids.sub,bids.ses,bidsCategory);
+		else
+			bids.directory = sprintf('%1$ssub-%2$s\\',bids.directory,bids.sub);
+		end
+		
 		if ~isfolder(bids.directory)
 			error("Specified BIDS participant folder does not exist");
 		end
@@ -43,7 +55,7 @@ else
 end
 
 % Now create the filename with required detail
-if detailed
+if detailedFile
 	filename = sprintf('%1$ssub-%2$s_ses-%3$s_task-%4$s_run-%5$s_%6$s%7$s',bids.directory,bids.sub,bids.ses,bids.task,bids.run,description,type);
 else
 	filename = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,description,type);
