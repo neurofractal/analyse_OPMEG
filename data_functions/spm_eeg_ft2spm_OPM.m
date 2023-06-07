@@ -164,13 +164,13 @@ end
 if  ~isempty(grad)
     D = sensors(D, 'MEG', ft_convert_units(grad, 'mm'));
     
-    S = [];
-    S.task = 'project3D';
-    S.modality = 'MEG';
-    S.updatehistory = 0;
-    S.D = D;
-
-    D = spm_eeg_prep(S);
+%     S = [];
+%     S.task = 'project3D';
+%     S.modality = 'MEG';
+%     S.updatehistory = 0;
+%     S.D = D;
+% 
+%     D = spm_eeg_prep(S);
 end
 
 D = check(D);
