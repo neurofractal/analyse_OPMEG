@@ -19,6 +19,19 @@ if ~isfield(cfg, 'correctgrad')
     cfg.correctgrad = 'yes';
 end
 
+if ~isfield(cfg, 'li')
+    cfg.li = 9;
+end
+
+if ~isfield(cfg, 'le')
+    cfg.le = 2;
+end
+
+if ~isfield(cfg, 'corrLim')
+    cfg.corrLim = 0.98;
+end
+
+
 %% Add paths
 addpath('D:\scripts\tim_amm'); % FIXME Hardcoded for Rob at the moment
 addpath(cfg.path_to_SPM)
@@ -42,8 +55,9 @@ warning('on','all');
 % FIXME Currently hard-coded
 S               = [];
 S.D             = data_SPM;
-S.le            = 1;
-S.corrLim       = 0.98;
+S.le            = cfg.le;
+S.li            = cfg.li;
+S.corrLim       = cfg.corrLim;
 data_SPM_AMM    = spm_opm_amm(S); % Contact Tim Tierney for these scripts
 
 %% To Fieldtrip
