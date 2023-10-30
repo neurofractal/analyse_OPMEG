@@ -5,7 +5,11 @@ function [data_out_AMM] = ft_wrapper_spm_amm(cfg,data)
 %   cfg.correctgrad         = Correct the forward model ('yes' or no';
 %                             default = 'no'). This is experimental and
 %                             should be used with caution.
-%
+%	cfg.corrLim				= default 1, adjust to 0.98 or 0.9 as necessary.
+%	cfg.li					= internal harmonic order (default = 9)
+%	cfg.le					= external harmonic order (default = 2)
+%	cfg.window				= temporal window size in seconds (default = 10)
+% 
 % Copyright (C) 2023 Wellcome Trust Centre for Neuroimaging
 %
 % Author for this wrapper:      Robert Seymour (rob.seymour@ucl.ac.uk)
@@ -19,8 +23,30 @@ if ~isfield(cfg, 'correctgrad')
     cfg.correctgrad = 'yes';
 end
 
+if ~isfield(cfg, 'corrLim')
+	cfg.corrLim = 1;
+end
+
+if ~isfield(cfg, 'li')
+	cfg.li = 9;
+end
+
+if ~isfield(cfg, 'le')
+	cfg.le = 2;
+end
+
+if ~isfield(cfg, 'window')
+	cfg.window = 10;
+end
+
 %% Add paths
-addpath('D:\scripts\tim_amm'); % FIXME Hardcoded for Rob at the moment
+% Check if fieldtrip is currently in the path
+try 
+	[~, ftpath] = ft_version;
+	rmpath(ftpath);
+catch
+end
+
 addpath(cfg.path_to_SPM)
 warning('off','all');
 spm('defaults', 'eeg')
@@ -39,12 +65,17 @@ disp('Converting data to SPM format...')
 warning('on','all');
 
 %% AMM
-% FIXME Currently hard-coded
 S               = [];
 S.D             = data_SPM;
-S.le            = 1;
-S.corrLim       = 0.98;
-data_SPM_AMM    = spm_opm_amm(S); % Contact Tim Tierney for these scripts
+S.corrLim       = cfg.corrLim;
+S.li			= cfg.li;
+S.le			= cfg.le;
+S.window		= cfg.window;
+try
+	data_SPM_AMM    = spm_opm_amm(S); % Contact Tim Tierney for these scripts
+catch
+	error('Please check that you have the latest version of SPM which includes spm_opm_amm.');
+end
 
 %% To Fieldtrip
 data_out = data_SPM_AMM.ftraw;
@@ -67,9 +98,6 @@ close all force
 warning('off','all');
 rmpath(genpath(cfg.path_to_SPM));
 warning('on','all');
-% disp('Adding Fieldtrip back your path...');
-% addpath(ft_path);
-%ft_defaults
 
 % Delete SPM data
 try
@@ -79,6 +107,18 @@ try
     delete mdata.mat
 catch
 end
+
+
+% Add fieldtrip back
+try
+	addpath(ftpath);
+	ft_defaults;
+catch
+end
+
+
+end
+
 
 % Subfunction to remove sensors from the grad structure not in the data
 function dataout = fixsens(data1)
@@ -91,7 +131,17 @@ function dataout = fixsens(data1)
 
     for p = 1:length(pot_grad_fields)
         if isfield(grad_mod,pot_grad_fields{p})
-            eval(['grad_mod.' pot_grad_fields{p} ' = grad_mod.' pot_grad_fields{p} '(chans2keep,:)']);
+            % Define the field name to update
+			fieldName = pot_grad_fields{p};
+			
+			% Check if the field exists in grad_mod
+			if isfield(grad_mod, fieldName)
+    			% Access and update the field directly
+    			grad_mod.(fieldName) = grad_mod.(fieldName)(chans2keep, :);
+			else
+    			% Handle the case when the field does not exist
+    			disp(['Field "', fieldName, '" does not exist in grad_mod.']);
+			end
         end
     end
 
@@ -100,8 +150,13 @@ function dataout = fixsens(data1)
 
     for p = 1:length(pot_grad_fields)
         if isfield(grad_mod,pot_grad_fields{p})
-            eval(['grad_mod.' pot_grad_fields{p} ...
-                ' = grad_mod.' pot_grad_fields{p} '(chans2keep)']);
+			fieldName = pot_grad_fields{p};
+			
+			if isfield(grad_mod, fieldName)
+    			grad_mod.(fieldName) = grad_mod.(fieldName)(chans2keep);
+			else
+    			disp(['Field "', fieldName, '" does not exist in grad_mod.']);
+			end
         end
     end
 
@@ -113,6 +168,4 @@ function dataout = fixsens(data1)
     % Replace
     dataout=data1;
     dataout.grad = grad_mod;
-end
-
 end
