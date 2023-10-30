@@ -23,6 +23,7 @@ if ~isfield(cfg, 'correctgrad')
     cfg.correctgrad = 'yes';
 end
 
+<<<<<<< HEAD
 if ~isfield(cfg, 'corrLim')
 	cfg.corrLim = 1;
 end
@@ -39,6 +40,21 @@ if ~isfield(cfg, 'window')
 	cfg.window = 10;
 end
 
+=======
+if ~isfield(cfg, 'li')
+    cfg.li = 9;
+end
+
+if ~isfield(cfg, 'le')
+    cfg.le = 2;
+end
+
+if ~isfield(cfg, 'corrLim')
+    cfg.corrLim = 0.98;
+end
+
+
+>>>>>>> 166b81613d6d57bc8f5b51dbd317d811d4393b51
 %% Add paths
 % Check if fieldtrip is currently in the path
 try 
@@ -67,6 +83,7 @@ warning('on','all');
 %% AMM
 S               = [];
 S.D             = data_SPM;
+<<<<<<< HEAD
 S.corrLim       = cfg.corrLim;
 S.li			= cfg.li;
 S.le			= cfg.le;
@@ -76,6 +93,12 @@ try
 catch
 	error('Please check that you have the latest version of SPM which includes spm_opm_amm.');
 end
+=======
+S.le            = cfg.le;
+S.li            = cfg.li;
+S.corrLim       = cfg.corrLim;
+data_SPM_AMM    = spm_opm_amm(S); % Contact Tim Tierney for these scripts
+>>>>>>> 166b81613d6d57bc8f5b51dbd317d811d4393b51
 
 %% To Fieldtrip
 data_out = data_SPM_AMM.ftraw;

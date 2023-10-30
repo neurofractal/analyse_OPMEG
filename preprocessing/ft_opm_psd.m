@@ -208,7 +208,7 @@ switch method_for_fft
         end
         
         % Split data into epochs
-        nsamps = (cfg.trial_length)*rawData.fsample;
+        nsamps = floor((cfg.trial_length)*rawData.fsample);
         ntrials = numel(rawData.trial);
         
         for ii = 1:ntrials
