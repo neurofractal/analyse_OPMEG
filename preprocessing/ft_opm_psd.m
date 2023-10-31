@@ -182,7 +182,7 @@ switch method_for_fft
         pow = psd_hann.powspctrm;
         
         figure;
-        set(gcf,'Position',[100 100 1200 800]);
+%         set(gcf,'Position',[100 100 1200 800]);
         semilogy(psd_hann.freq,psd_hann.powspctrm);
         set(gca,'FontSize',14);
         xlabel('Frequency (Hz)');
