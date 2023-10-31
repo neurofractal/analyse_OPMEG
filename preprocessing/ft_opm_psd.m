@@ -134,7 +134,7 @@ switch method_for_fft
         if strcmp(cfg.plot,'yes')
             % Make a Figure
             figure()
-            set(gcf,'Position',[100 100 1200 800]);
+%             set(gcf,'Position',[100 100 1200 800]);
             
             h = plot(freq(strt:stp),log10(po(:,strt:stp)),...
                 'LineWidth',1);
@@ -312,7 +312,7 @@ end
          if strcmp(cfg.plot,'yes')
             % Make a Figure
             figure()
-            set(gcf,'Position',[100 100 1200 800]);
+%             set(gcf,'Position',[100 100 1200 800]);
             
             h = plot(freq(strt:stp),log10(pow(:,strt:stp)),...
                 'LineWidth',1);
