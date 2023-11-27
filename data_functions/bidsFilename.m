@@ -1,4 +1,4 @@
-function [filename] = bidsFilename(bids,description,type,derivative,detailedFile,bidsCategory)
+function [filename, folder] = bidsFilename(bids,description,type,derivative,detailedFile,bidsCategory)
 % Function to create a BIDS style filename. It is useful for saving and
 % loading data. Use as:
 % Usual bids info as structure containing strings
@@ -60,3 +60,6 @@ if detailedFile
 else
 	filename = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,description,type);
 end
+
+% Get the folder separately
+[folder,~,~] = fileparts(filename);
