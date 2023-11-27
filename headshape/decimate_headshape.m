@@ -7,7 +7,7 @@ switch method
     case 'gridaverage'
         try
     if strcmp(headshape.unit,'mm')
-         decimated_headshape = pcdownsample(headshape_pc,'gridAverage',20);
+         decimated_headshape = pcdownsample(headshape_pc,'gridAverage',8);
     else
         decimated_headshape = pcdownsample(headshape_pc,'gridAverage',2);
     end 
@@ -17,7 +17,7 @@ switch method
         
     case 'nonuniform'
         decimated_headshape = pcdownsample(headshape_pc,...
-            'nonuniformGridSample',20);
+            'nonuniformGridSample',100);
 end
 
 decimated_headshape = decimated_headshape.Location;

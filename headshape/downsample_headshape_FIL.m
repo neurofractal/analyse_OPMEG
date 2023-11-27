@@ -64,6 +64,9 @@ remove_zlim            = ft_getopt(cfg,'remove_zlim',0);
 
 method                 = ft_getopt(cfg,'method','gridaverage');
 
+rotate_amount                  = ft_getopt(cfg,'rotate',0);
+disp([rotate_amount])
+
 facial_info_above_z            = ft_getopt(cfg,'facial_info_above_z',20);
 facial_info_below_z            = ft_getopt(cfg,'facial_info_below_z',80);
 facial_info_above_y            = ft_getopt(cfg,'facial_info_above_y',70);
@@ -128,6 +131,22 @@ if ~isempty(facial_info)
     view([90 0]);
 end
 
+%% Remove points below z-lim but at an angle
+% Also remove points Xmm above nasion
+
+if rotate_amount ~= 0
+    rotm = roty(rotate_amount);
+    rotm = vertcat([rotm,[0;0;0]],[0 0 0 1])
+
+    headshape2 = ft_transform_geometry(rotm,headshape)
+    points_below_X = find(headshape2.pos(:,3) < remove_zlim+headshape2.fid.pos(1,3));
+else
+    points_below_X = find(headshape.pos(:,3) < remove_zlim);
+end
+
+% Remove these points
+headshape.pos(points_below_X,:) = [];
+
 %% if the user specified to remove points along the zlim
 if ~isempty(remove_zlim)
     
@@ -185,7 +204,7 @@ ft_plot_mesh(headshape_orig.pos,'vertexcolor','r','vertexsize',2); hold on;
 ft_plot_mesh(decimated_headshape,'vertexcolor','b','vertexsize',10); hold on;
 view(-90,0);
 
-print('headshape_quality','-dpng');
+%print('headshape_quality','-dpng');
 
 % Replace headshape.pos with decimated pos
 headshape.pos = decimated_headshape;
@@ -217,7 +236,7 @@ for angle = 1:length(view_angle)
     view(view_angle(angle),10);
 end
 
-print('headshape_quality2','-dpng');
+%print('headshape_quality2','-dpng');
 
 
 % Export filename
