@@ -1,4 +1,4 @@
-function [filename, folder] = bidsFilename(bids,cfg)
+function [filename, folder] = bidsFilename(cfg,bids)
 % Function to create a BIDS style filename. It is useful for saving and
 % loading data. Use as:
 % Usual bids info as structure containing strings:
@@ -39,7 +39,9 @@ elseif (~isfield(cfg,'description') || isempty(cfg.description))
 	cfg.description = 'folderOnly';
 	folderOnly = true;
 end
-if (~folderOnly && (~isfield(cfg,'type') || isempty(cfg.type)))
+if folderOnly
+	cfg.type = '.mat';
+elseif (~isfield(cfg,'type') || isempty(cfg.type))
 	disp('Defaulting cfg.type to .mat')
 	cfg.type = '.mat';
 end
