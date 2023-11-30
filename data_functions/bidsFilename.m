@@ -16,6 +16,31 @@ function [filename, folder] = bidsFilename(cfg,bids)
 % cfg.detailed		= true; % or false. Include ses/task/run info?
 % If cfg is empty, or not enough info is provided only a folder will be output
 % 
+% % Minimum use example
+% bids			= [];
+% bids.sub		= subCode;
+% bids.directory	= 'D:\data\EM067\1_YOUNG';
+% cfg				= [];
+% cfg.category	= 'preprocessing';
+% [filename, folder] = bidsFilename(cfg,bids)
+% 
+% % Full use example
+% bids			= [];
+% bids.sub		= subCode;
+% bids.ses		= '001';
+% bids.run		= '001';
+% bids.task		= 'practice';
+% bids.directory	= 'D:\data\amazingProject';
+% 
+% cfg				= [];
+% cfg.category	= 'meg';
+% cfg.description	= 'frequencyData'; 
+% cfg.type		= '.mat'; 
+% cfg.derivative	= true; 
+% cfg.detailed	= true; 
+% 
+% [filename, folder] = bidsFilename(bids,cfg);
+
 % Author: Nicholas Alexander, n.alexander@ucl.ac.uk
 
 %% Check input
