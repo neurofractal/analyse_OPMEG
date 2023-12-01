@@ -1,4 +1,4 @@
-function [filename, folder] = bidsFilename(cfg,bids)
+function [filename, folder, fullfile] = bidsFilename(cfg,bids)
 % Function to create a BIDS style filename. It is useful for saving and
 % loading data. Use as:
 % Usual bids info as structure containing strings:
@@ -139,13 +139,14 @@ end
 
 % Now create the filename with required detail
 if cfg.detailed
-	filename = sprintf('%1$ssub-%2$s_ses-%3$s_task-%4$s_run-%5$s_%6$s%7$s',bids.directory,bids.sub,bids.ses,bids.task,bids.run,cfg.description,cfg.type);
+	fullfile = sprintf('%1$ssub-%2$s_ses-%3$s_task-%4$s_run-%5$s_%6$s%7$s',bids.directory,bids.sub,bids.ses,bids.task,bids.run,cfg.description,cfg.type);
 else
-	filename = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,cfg.description,cfg.type);
+	fullfile = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,cfg.description,cfg.type);
 end
 
 % Get the folder separately
-[folder,~,~] = fileparts(filename);
+[folder,filename,ext] = fileparts(fullfile);
+filename = strcat(filename,ext);
 
 % If not enough information was provided in the cfg, set filename to folder.
 if folderOnly
