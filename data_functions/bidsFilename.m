@@ -111,7 +111,11 @@ if isfolder(bids.directory)
 		if ~folderOnly
 			bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
 		else
-			bids.directory = sprintf('%1$sderivatives\\sub-%3$s\\',bids.directory,bids.sub);
+			if (~isfield(cfg,'category') || isempty(cfg.category))
+				bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\',bids.directory,bids.sub);
+			else
+				bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
+			end
 		end
 
 		% Check that directory exists with the derivative folder
