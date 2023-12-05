@@ -142,7 +142,7 @@ else
 end
 
 % Now create the filename with required detail
-if cfg.detailed
+if ~(~isfield(cfg,'detailed') || isempty(cfg.detailed)) && cfg.detailed
 	fullfile = sprintf('%1$ssub-%2$s_ses-%3$s_task-%4$s_run-%5$s_%6$s%7$s',bids.directory,bids.sub,bids.ses,bids.task,bids.run,cfg.description,cfg.type);
 else
 	fullfile = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,cfg.description,cfg.type);
