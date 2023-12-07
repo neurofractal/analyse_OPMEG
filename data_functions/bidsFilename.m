@@ -50,11 +50,8 @@ if ~isstruct(cfg)
 	disp('cfg is empty. Only providing folder output.');
 	folderOnly = true;
 end
-if folderOnly
-	cfg.category = 'folderOnly';
-elseif	(~isfield(cfg,'category') || isempty(cfg.category))
+if ~folderOnly && (~isfield(cfg,'category') || isempty(cfg.category))
 	disp('cfg.category not provided. Only returning folder output');
-	cfg.category = 'folderOnly';
 	folderOnly = true;
 end
 if folderOnly
@@ -65,7 +62,7 @@ elseif (~isfield(cfg,'description') || isempty(cfg.description))
 	folderOnly = true;
 end
 if folderOnly
-	cfg.type = '.mat';
+	cfg.type = 'folderOnly';
 elseif (~isfield(cfg,'type') || isempty(cfg.type))
 	disp('Defaulting cfg.type to .mat')
 	cfg.type = '.mat';
@@ -81,11 +78,18 @@ end
 
 % bids
 if ~isstruct(bids)
-	error('bids is empty. Please provide at least bids.directory and bids.sub');
-elseif ((~isfield(bids,'directory') || isempty(bids.directory)) || (~isfield(bids,'sub') || isempty(bids.sub)))
-	error('Please provide both bids.directory and bids.sub');
+	error('bids is empty.');
 end
 
+if (~isfield(bids,'directory') || isempty(bids.directory))
+	warning('No bids.directory provided. Defaulting to cd');
+	bids.directory = cd;
+end
+noSub = false;
+if (~isfield(bids,'sub') || isempty(bids.sub))
+	disp('No bids.sub provided. Output will not be subject specific');
+	noSub = true;
+end
 if (~isfield(bids,'ses') || isempty(bids.ses))
 	cfg.detailed = false;
 	if ~cfg.derivative
@@ -99,6 +103,7 @@ if (~isfield(bids,'run') || isempty(bids.run))
 	cfg.detailed = false;
 end
 
+
 %% Produce output filename
 % Check if the initial directory exists. 
 if isfolder(bids.directory)
@@ -109,12 +114,24 @@ if isfolder(bids.directory)
 	% If using the derivative folder, add that on, including sub
 	if cfg.derivative
 		if ~folderOnly
-			bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
-		else
-			if (~isfield(cfg,'category') || isempty(cfg.category))
-				bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\',bids.directory,bids.sub);
+			if ~noSub
+				bids.directory = sprintf('%1$sderivatives\\%2$s\\',bids.directory,cfg.category);
 			else
 				bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
+			end
+		else
+			if (~isfield(cfg,'category') || isempty(cfg.category))
+				if ~noSub
+					bids.directory = sprintf('%1$sderivatives\\sub-%2$s\\',bids.directory,bids.sub);
+				else
+					bids.directory = sprintf('%1$sderivatives\\',bids.directory);
+				end
+			else
+				if ~noSub
+					bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
+				else
+					bids.directory = sprintf('%1$sderivatives\\%2$s\\',bids.directory,cfg.category);
+				end
 			end
 		end
 
@@ -123,13 +140,19 @@ if isfolder(bids.directory)
 			warning("Creating new derivatives directory")
 			mkdir(bids.directory);
 		end
-
-	% Otherwise just add the subject folder
 	else
 		if ~folderOnly
-			bids.directory = sprintf('%1$ssub-%2$s\\ses-%3$s\\%4$s\\',bids.directory,bids.sub,bids.ses,cfg.category);
+			if ~noSub
+				bids.directory = sprintf('%1$ssub-%2$s\\ses-%3$s\\%4$s\\',bids.directory,bids.sub,bids.ses,cfg.category);
+			else
+				bids.directory = sprintf('%1$sses-%2$s\\%3$s\\',bids.directory,bids.ses,cfg.category);
+			end
 		else
-			bids.directory = sprintf('%1$ssub-%2$s\\ses-%3$s\\',bids.directory,bids.sub,bids.ses);
+			if ~noSub
+				bids.directory = sprintf('%1$ssub-%2$s\\ses-%3$s\\',bids.directory,bids.sub,bids.ses);
+			else
+				bids.directory = sprintf('%1$sses-%2$s\\',bids.directory,bids.ses);
+			end
 		end
 
 		% This function should not interfere with the original data folder.
@@ -155,6 +178,7 @@ filename = strcat(filename,ext);
 % If not enough information was provided in the cfg, set filename to folder.
 if folderOnly
 	filename = folder;
+	fullfile = folder;
 end
 
 
