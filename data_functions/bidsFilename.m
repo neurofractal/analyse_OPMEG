@@ -115,9 +115,9 @@ if isfolder(bids.directory)
 	if cfg.derivative
 		if ~folderOnly
 			if ~noSub
-				bids.directory = sprintf('%1$sderivatives\\%2$s\\',bids.directory,cfg.category);
-			else
 				bids.directory = sprintf('%1$sderivatives\\%2$s\\sub-%3$s\\',bids.directory,cfg.category,bids.sub);
+			else
+				bids.directory = sprintf('%1$sderivatives\\%2$s\\',bids.directory,cfg.category);
 			end
 		else
 			if (~isfield(cfg,'category') || isempty(cfg.category))
@@ -168,7 +168,7 @@ end
 if ~(~isfield(cfg,'detailed') || isempty(cfg.detailed)) && cfg.detailed
 	fullfile = sprintf('%1$ssub-%2$s_ses-%3$s_task-%4$s_run-%5$s_%6$s%7$s',bids.directory,bids.sub,bids.ses,bids.task,bids.run,cfg.description,cfg.type);
 else
-	fullfile = sprintf('%1$ssub-%2$s_%3$s%4$s',bids.directory,bids.sub,cfg.description,cfg.type);
+	fullfile = sprintf('%1$s%2$s%3$s',bids.directory,cfg.description,cfg.type);
 end
 
 % Get the folder separately
