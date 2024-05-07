@@ -38,15 +38,6 @@ if ~isfield(cfg, 'vis')
     cfg.vis = 'fancy';
 end
 
-% Make atlas.color field if not present
-if ~isfield(atlas, 'color')
-    try
-        atlas.color = linspecer(length(atlas.tissuelabel));
-    catch
-        atlas.color = repmat(0,length(atlas.tissuelabel),3);
-    end
-end
-
 % If 'all' specified use all the tissuelabels
 if strcmp(cfg.channel,'all')
     cfg.channel = atlas.tissuelabel;
@@ -58,6 +49,15 @@ if ~isfield(atlas,'tissue') && isfield(atlas,'parcellation')
     try
         atlas.tissuelabel = atlas.parcellationlabel;
     catch
+    end
+end
+
+% Make atlas.color field if not present
+if ~isfield(atlas, 'color')
+    try
+        atlas.color = linspecer(length(atlas.tissuelabel));
+    catch
+        atlas.color = repmat(0,length(atlas.tissuelabel),3);
     end
 end
     
