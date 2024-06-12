@@ -125,7 +125,7 @@ for fieldIdx = 1:length(statFields)
 	ft_sourcewrite(cfg,statI.(statFields{fieldIdx}));
 
 	% Smooth
-	smoothNiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_smooth_',outputFilename,'.nii']);
+	smoothNiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_','.nii']);
 
 	commandLine = strcat([cwDir, '\\wb_command -volume-smoothing  ', ...
 				niftiF.(statFields{fieldIdx}), ...
@@ -135,7 +135,7 @@ for fieldIdx = 1:length(statFields)
 	system(commandLine)
 
 	% Left hemisphere
-	leftGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_smooth_left_',outputFilename,'.shape.gii']);
+	leftGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_left','.shape.gii']);
 	commandLine = [cwDir, '\\wb_command -volume-to-surface-mapping ', ...
 				niftiF.(statFields{fieldIdx}), ' ',...
 				lSurf, ' ', ...
@@ -143,7 +143,7 @@ for fieldIdx = 1:length(statFields)
 	system(commandLine)
 
 	% Right hemisphere
-	rightGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_smooth_right_',outputFilename,'.shape.gii']);
+	rightGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_right','.shape.gii']);
 	commandLine = strcat([cwDir, '\\wb_command -volume-to-surface-mapping ', ...
 				niftiF.(statFields{fieldIdx}), ' ',...
 				rSurf, ' ', ...
@@ -153,7 +153,7 @@ for fieldIdx = 1:length(statFields)
 	% Sort out colourmap usding a scaled back maxabs value due to smoothing
 	originalMinMaxRange = max(max(max(abs(statI.(statFields{fieldIdx}).stat))));
 	smoothedData = ft_read_mri(niftiF.(statFields{fieldIdx}));
-	minMaxRange = max(max(max(abs(smoothedData.anatomy))));
+	minMaxRange = max(max(max(abs(smoothedData.anatomy)))) * 0.9;
 	originalToSmoothRatio = minMaxRange/originalMinMaxRange;
 	criticalVal = originalToSmoothRatio * max(abs(stat.(statFields{fieldIdx}).critval));
 
