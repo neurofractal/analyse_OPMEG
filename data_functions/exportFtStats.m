@@ -125,7 +125,7 @@ for fieldIdx = 1:length(statFields)
 	ft_sourcewrite(cfg,statI.(statFields{fieldIdx}));
 
 	% Smooth
-	smoothNiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_','.nii']);
+	smoothNiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_',outputFilename,'_smooth','.nii']);
 
 	commandLine = strcat([cwDir, '\\wb_command -volume-smoothing  ', ...
 				niftiF.(statFields{fieldIdx}), ...
@@ -134,8 +134,11 @@ for fieldIdx = 1:length(statFields)
 				' -fix-zeros -fwhm']);
 	system(commandLine)
 
+	% Brain mask
+	brain_mask_MNI152(smoothNiftiF.(statFields{fieldIdx}));
+
 	% Left hemisphere
-	leftGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_left','.shape.gii']);
+	leftGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_',outputFilename,'_smooth_left','.shape.gii']);
 	commandLine = [cwDir, '\\wb_command -volume-to-surface-mapping ', ...
 				niftiF.(statFields{fieldIdx}), ' ',...
 				lSurf, ' ', ...
@@ -143,7 +146,7 @@ for fieldIdx = 1:length(statFields)
 	system(commandLine)
 
 	% Right hemisphere
-	rightGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},outputFilename,'_smooth_right','.shape.gii']);
+	rightGiftiF.(statFields{fieldIdx}) = fullfile(outputFolder, [statFields{fieldIdx},'_',outputFilename,'_smooth_right','.shape.gii']);
 	commandLine = strcat([cwDir, '\\wb_command -volume-to-surface-mapping ', ...
 				niftiF.(statFields{fieldIdx}), ' ',...
 				rSurf, ' ', ...
