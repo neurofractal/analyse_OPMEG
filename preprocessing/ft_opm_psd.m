@@ -50,6 +50,14 @@ if ~isfield(cfg, 'plot_legend')
     cfg.plot_legend = 'yes';
 end
 
+if ~isfield(cfg, 'interactive')
+    cfg.interactive = 'yes';
+end
+
+if ~isfield(cfg, 'plot_mean')
+    cfg.plot_mean = 'yes';
+end
+
 if ~isfield(cfg, 'average')
     cfg.average = 'median';
 end

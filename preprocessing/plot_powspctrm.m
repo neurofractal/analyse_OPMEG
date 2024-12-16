@@ -36,8 +36,11 @@ end
 
 hold on;
 % Plot the mean in black
-plot(freq,mean_po,'-k','LineWidth',2);
-hold on
+if strcmp(cfg.plot_mean,'yes')
+    plot(freq,mean_po,'-k','LineWidth',2);
+    hold on
+end
+
 xp2 =0:round(freq(end));
 yp2=ones(1,round(freq(end))+1)*15;
 p2 =plot(xp2,yp2,'--k');
@@ -92,5 +95,38 @@ if strcmp(cfg.plot_chans,'yes')
             set(ht,'FontSize',12);
         end
     end
+    
+    if strcmp(cfg.interactive,'yes')
+        % Assign unique labels to each line
+        for i = 1:length(h)
+            h(i).UserData = label{i}; % Customize as needed
+        end
+
+        disp(h(1).UserData)
+
+        % Enable data cursor mode
+        dcm = datacursormode(gcf);
+        dcm.Enable = 'on';
+        dcm.UpdateFcn = @(~, event) customLabel(event);
+    end
 end
 end
+
+function txt = customLabel(event)
+    disp('CustomLabel called'); % Debug message
+    targetLine = event.Target;
+
+    if isprop(targetLine, 'UserData') && ~isempty(targetLine.UserData)
+        label = targetLine.UserData; % Retrieve the label from UserData
+    else
+        label = 'No Label'; % Default if UserData is empty
+    end
+
+    % Adjust Y value for logarithmic scale
+    x = event.Position(1); % X-coordinate
+    y = event.Position(2); % Y-coordinate (already in log scale for display)
+
+    % Format the displayed text
+    txt = sprintf('Label: %s\nX: %.2f Hz\nY: %.2f (log)', label, x, y);
+end
+
